@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Translator</title>
+</head>
+<body>
+    <h2>Upload Menu Image</h2>
+    <input type="file" id="imageInput">
+    <button onclick="uploadImage()">Upload</button>
+
+    <h3>Detected Dishes</h3>
+    <div id="menuResults"></div>
+
+    <script>
+        async function uploadImage() {
+            let fileInput = document.getElementById("imageInput");
+            if (!fileInput.files.length) {
+                alert("Please select an image!");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("image", fileInput.files[0]);
+
+            let response = await fetch("http://127.0.0.1:5000/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            let result = await response.json();
+            let menuDiv = document.getElementById("menuResults");
+            menuDiv.innerHTML = "";
+
+            result.menu_items.forEach(item => {
+                let div = document.createElement("div");
+                div.innerHTML = `<p><strong>${item.name}</strong></p>
+                                 <img src="${item.image_url}" width="200">`;
+                menuDiv.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
