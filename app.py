@@ -6,6 +6,9 @@ from flask_cors import CORS
 from PIL import Image
 import pytesseract
 
+# Set the Tesseract path manually
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
 app = Flask(__name__)
 CORS(app)  # Allows frontend to call backend
 
