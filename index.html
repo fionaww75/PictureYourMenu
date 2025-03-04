@@ -175,13 +175,14 @@
             </div>
         </div>
 
-        <h3>Dishes On The Menu</h3>
+        <h3>Your dishes on the menu</h3>
         <div id="menuResults"></div>
     </div>
 
     <script>
-        const API_KEY = 'AIzaSyAFSmz1gJoGIxo_IV9zYmOuZi5aACPEAlI';
-        const CX = '87709a1af316d4e7e';
+        const GOOGLE_API_KEY = 'AIzaSyAFSmz1gJoGIxo_IV9zYmOuZi5aACPEAlI';
+        const GOOGLE_CX = '87709a1af316d4e7e';
+        const OPENAI_API_KEY = 'your_openai_api_key_here'; // Replace with your OpenAI API key
         
         // Add file name display functionality
         document.getElementById('imageInput').addEventListener('change', function(e) {
@@ -189,18 +190,71 @@
             document.getElementById('fileName').textContent = fileName;
         });
 
-        async function getCuisineImage(cuisine) {
-            const searchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(cuisine + " dish")}&cx=${CX}&key=${API_KEY}&searchType=image&num=1&imgSize=large`;
+        async function filterDishesWithGPT(textLines) {
+            const prompt = `Given the following lines of text extracted from a menu image, identify only the dish names and return them as a JSON array. Remove prices, descriptions, categories, and any non-dish text. Limit to 5 most clear dish names:\n\n${textLines.join('\n')}`;
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4',
+                        messages: [{
+                            role: 'user',
+                            content: prompt
+                        }],
+                        temperature: 0.3
+                    })
+                });
+
+                const data = await response.json();
+                const dishList = JSON.parse(data.choices[0].message.content);
+                return dishList;
+            } catch (error) {
+                console.error('Error filtering dishes:', error);
+                return textLines.slice(0, 5); // Fallback to first 5 lines if API fails
+            }
+        }
+
+        async function getCuisineImages(dish) {
+            const searchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + " dish food")}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=3&imgSize=large`;
             
             try {
                 const response = await fetch(searchUrl);
                 const data = await response.json();
                 
                 if (data.items && data.items.length > 0) {
-                    return data.items[0].link;
+                    // Get all three image URLs
+                    const imageUrls = data.items.map(item => item.link);
+                    
+                    // Use GPT to select the most relevant image
+                    const imageSelectionPrompt = `Given these 3 image URLs for the dish "${dish}", analyze their URLs and select the most likely to be an authentic photo of the dish. Return only the index number (0, 1, or 2) of the best image:\n\n${imageUrls.join('\n')}`;
+                    
+                    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${OPENAI_API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: 'gpt-4',
+                            messages: [{
+                                role: 'user',
+                                content: imageSelectionPrompt
+                            }],
+                            temperature: 0.3
+                        })
+                    });
+
+                    const gptData = await gptResponse.json();
+                    const bestImageIndex = parseInt(gptData.choices[0].message.content);
+                    return imageUrls[bestImageIndex] || imageUrls[0];
                 }
             } catch (error) {
-                console.error('Error fetching image:', error);
+                console.error('Error fetching images:', error);
             }
             
             return null;
@@ -241,22 +295,24 @@
                 const file = fileInput.files[0];
                 const result = await worker.recognize(file);
                 
-                // Extract menu items (non-empty lines)
-                const menuItems = result.data.text
+                // Extract text lines
+                const textLines = result.data.text
                     .split('\n')
                     .map(line => line.trim())
-                    .filter(line => line.length > 0)
-                    .slice(0, 10); // Limit to 10 items
+                    .filter(line => line.length > 0);
 
-                // Process each menu item
-                for (const item of menuItems) {
-                    const imageUrl = await getCuisineImage(item);
+                // Filter dishes using GPT
+                const dishes = await filterDishesWithGPT(textLines);
+
+                // Process each dish
+                for (const dish of dishes) {
+                    const imageUrl = await getCuisineImages(dish);
                     
                     const div = document.createElement('div');
                     div.className = 'menu-item';
                     div.innerHTML = `
-                        <img src="${imageUrl || 'placeholder.jpg'}" alt="${item}">
-                        <p><strong>${item}</strong></p>
+                        <img src="${imageUrl || 'placeholder.jpg'}" alt="${dish}">
+                        <p><strong>${dish}</strong></p>
                     `;
                     menuDiv.appendChild(div);
                 }
