@@ -3,42 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PictureYourMenu</title>
+    <title>Picture Your Menu</title>
+    <!-- Add Tesseract.js -->
+    <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        h3 {
+            color: #444;
+            margin: 2rem 0 1rem;
+            font-weight: 500;
+        }
+
+        .upload-section {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            width: 0.1px;
+            height: 0.1px;
+        }
+
+        .file-input-wrapper label {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #555;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .file-input-wrapper label:hover {
+            background: #e8e8e8;
+        }
+
+        .file-input-wrapper label span {
+            margin-left: 0.5rem;
+        }
+
+        #fileName {
+            margin-left: 1rem;
+            color: #666;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #menuResults {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+            padding: 1rem 0;
+        }
+
+        .menu-item {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-item p {
+            padding: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .menu-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+            color: #666;
+        }
+
+        .progress {
+            margin-top: 1rem;
+            height: 4px;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #007bff;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+    </style>
 </head>
 <body>
-    <h2>Upload Menu Image</h2>
-    <input type="file" id="imageInput">
-    <button onclick="uploadImage()">Upload</button>
+    <div class="container">
+        <h2>Picture Your Menu</h2>
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="imageInput" accept="image/*">
+                <label for="imageInput">
+                    Choose My Menu
+                    <span id="fileName">Hungry?</span>
+                </label>
+            </div>
+            <button onclick="processImage()" id="processButton">Check It Out</button>
+        </div>
 
-    <h3>Detected Dishes</h3>
-    <div id="menuResults"></div>
+        <div id="loading">
+            Looking for your dishes...
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <h3>Dishes On The Menu</h3>
+        <div id="menuResults"></div>
+    </div>
 
     <script>
-        async function uploadImage() {
-            let fileInput = document.getElementById("imageInput");
+        const API_KEY = 'AIzaSyAFSmz1gJoGIxo_IV9zYmOuZi5aACPEAlI';
+        const CX = '87709a1af316d4e7e';
+        
+        // Add file name display functionality
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+            document.getElementById('fileName').textContent = fileName;
+        });
+
+        async function getCuisineImage(cuisine) {
+            const searchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(cuisine + " dish")}&cx=${CX}&key=${API_KEY}&searchType=image&num=1&imgSize=large`;
+            
+            try {
+                const response = await fetch(searchUrl);
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    return data.items[0].link;
+                }
+            } catch (error) {
+                console.error('Error fetching image:', error);
+            }
+            
+            return null;
+        }
+
+        async function processImage() {
+            const fileInput = document.getElementById('imageInput');
+            const processButton = document.getElementById('processButton');
+            const loadingDiv = document.getElementById('loading');
+            const progressBar = document.getElementById('progressBar');
+            const menuDiv = document.getElementById('menuResults');
+
             if (!fileInput.files.length) {
-                alert("Please select an image!");
+                alert('Please select an image!');
                 return;
             }
 
-            let formData = new FormData();
-            formData.append("image", fileInput.files[0]);
+            // Disable button and show loading
+            processButton.disabled = true;
+            loadingDiv.style.display = 'block';
+            menuDiv.innerHTML = '';
 
-            let response = await fetch("https://pictureyourmenu.onrender.com/upload", {
-                method: "POST",
-                body: formData
-            });
+            try {
+                // Create a worker and set up progress tracking
+                const worker = await Tesseract.createWorker({
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            progressBar.style.width = `${m.progress * 100}%`;
+                        }
+                    }
+                });
 
-            let result = await response.json();
-            let menuDiv = document.getElementById("menuResults");
-            menuDiv.innerHTML = "";
+                // Initialize worker with English language
+                await worker.loadLanguage('eng');
+                await worker.initialize('eng');
 
-            result.menu_items.forEach(item => {
-                let div = document.createElement("div");
-                div.innerHTML = `<p><strong>${item.name}</strong></p>
-                                 <img src="${item.image_url}" width="200">`;
-                menuDiv.appendChild(div);
-            });
+                // Process the image
+                const file = fileInput.files[0];
+                const result = await worker.recognize(file);
+                
+                // Extract menu items (non-empty lines)
+                const menuItems = result.data.text
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .slice(0, 10); // Limit to 10 items
+
+                // Process each menu item
+                for (const item of menuItems) {
+                    const imageUrl = await getCuisineImage(item);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'menu-item';
+                    div.innerHTML = `
+                        <img src="${imageUrl || 'placeholder.jpg'}" alt="${item}">
+                        <p><strong>${item}</strong></p>
+                    `;
+                    menuDiv.appendChild(div);
+                }
+
+                // Clean up
+                await worker.terminate();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing image. Please try again.');
+            } finally {
+                // Re-enable button and hide loading
+                processButton.disabled = false;
+                loadingDiv.style.display = 'none';
+                progressBar.style.width = '0';
+            }
         }
     </script>
 </body>
