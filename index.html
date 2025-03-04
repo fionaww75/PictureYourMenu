@@ -24,7 +24,7 @@
             let formData = new FormData();
             formData.append("image", fileInput.files[0]);
 
-            let response = await fetch("http://127.0.0.1:5000/upload", {
+            let response = await fetch("https://pictureyourmenu.onrender.com/upload", {
                 method: "POST",
                 body: formData
             });
