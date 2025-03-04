@@ -5,9 +5,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 import pytesseract
-
-# Set the Tesseract path manually
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+import easyocr
 
 app = Flask(__name__)
 CORS(app)  # Allows frontend to call backend
@@ -25,12 +23,13 @@ os.makedirs(RESULTS_FOLDER, exist_ok=True)
 def serve_frontend():
     return send_from_directory('.', 'index.html')
 
+
+
 def extract_menu_items(image_path):
-    """Extract menu items from an image using OCR"""
-    image = Image.open(image_path)
-    text = pytesseract.image_to_string(image)
-    menu_items = [line.strip() for line in text.split("\n") if line.strip()]
-    return menu_items[:5]  # Limit to first 5 items
+    """Extract text from an image using EasyOCR."""
+    reader = easyocr.Reader(["en"])  # Supports multiple languages
+    result = reader.readtext(image_path, detail=0)  # Extracts text only
+    return [line.strip() for line in result if line.strip()][:5]  # Limit to first 5 items
 
 def get_cuisine_image(cuisine_name):
     """Fetch an image URL for the given cuisine"""
