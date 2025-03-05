@@ -6,6 +6,7 @@
     <title>Picture Your Menu</title>
     <!-- Add Tesseract.js -->
     <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
+    <script src="config.js"></script>
     <style>
         * {
             margin: 0;
@@ -169,7 +170,7 @@
         </div>
 
         <div id="loading">
-            Looking for your dishes...
+            <span id="statusText">Looking for your dishes...</span>
             <div class="progress">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
@@ -180,78 +181,102 @@
     </div>
 
     <script>
-        const GOOGLE_API_KEY = 'AIzaSyAFSmz1gJoGIxo_IV9zYmOuZi5aACPEAlI';
-        const GOOGLE_CX = '87709a1af316d4e7e';
-        const OPENAI_API_KEY = 'your_openai_api_key_here'; // Replace with your OpenAI API key
-        
         // Add file name display functionality
         document.getElementById('imageInput').addEventListener('change', function(e) {
-            const fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'Hungry?';
             document.getElementById('fileName').textContent = fileName;
         });
 
-        async function filterDishesWithGPT(textLines) {
-            const prompt = `Given the following lines of text extracted from a menu image, identify only the dish names and return them as a JSON array. Remove prices, descriptions, categories, and any non-dish text. Limit to 5 most clear dish names:\n\n${textLines.join('\n')}`;
+        async function filterDishesWithHF(textLines) {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = 'Identifying dishes...';
+
+            // Using FLAN-T5 model for text classification
+            const prompt = `Given the following menu text, identify only the dish names. Include them with the dishes namesif there are prices, descriptions. Remove categories and categories. Remove prices, descriptions, and categories. Return only the dish names separated by commas:\n\n${textLines.join('\n')}`;
             
             try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-4',
-                        messages: [{
-                            role: 'user',
-                            content: prompt
-                        }],
-                        temperature: 0.3
-                    })
-                });
+                const response = await fetch(
+                    "https://api-inference.huggingface.co/models/google/flan-t5-large",
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${config.HUGGING_FACE_API_KEY}`,
+                            "Content-Type": "application/json",
+                        },
+                        method: "POST",
+                        body: JSON.stringify({
+                            inputs: prompt,
+                            parameters: {
+                                max_length: 200,
+                                temperature: 0.3,
+                            }
+                        }),
+                    }
+                );
 
-                const data = await response.json();
-                const dishList = JSON.parse(data.choices[0].message.content);
-                return dishList;
+                const result = await response.json();
+                // Split the comma-separated response and clean up
+                const dishes = result[0].generated_text
+                    .split(',')
+                    .map(dish => dish.trim())
+                    .filter(dish => dish.length > 0)
+                    .slice(0, 5); // Limit to 5 dishes
+
+                return dishes;
             } catch (error) {
                 console.error('Error filtering dishes:', error);
                 return textLines.slice(0, 5); // Fallback to first 5 lines if API fails
             }
         }
 
+        async function selectBestImage(dish, imageUrls) {
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = `Selecting best image for ${dish}...`;
+
+            // Using FLAN-T5 for image URL analysis
+            const prompt = `Given these image URLs for the dish "${dish}", which index (0, 1, or 2) is most likely to be an authentic food photo? Only return the number:\n\n${imageUrls.join('\n')}`;
+            
+            try {
+                const response = await fetch(
+                    "https://api-inference.huggingface.co/models/google/flan-t5-large",
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${config.HUGGING_FACE_API_KEY}`,
+                            "Content-Type": "application/json",
+                        },
+                        method: "POST",
+                        body: JSON.stringify({
+                            inputs: prompt,
+                            parameters: {
+                                max_length: 1,
+                                temperature: 0.1,
+                            }
+                        }),
+                    }
+                );
+
+                const result = await response.json();
+                const index = parseInt(result[0].generated_text);
+                return isNaN(index) || index >= imageUrls.length ? 0 : index;
+            } catch (error) {
+                console.error('Error selecting image:', error);
+                return 0; // Return first image as fallback
+            }
+        }
+
         async function getCuisineImages(dish) {
-            const searchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + " dish food")}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=3&imgSize=large`;
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = `Finding images for ${dish}...`;
+
+            const searchUrl = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + " dish food")}&cx=${config.GOOGLE_CX}&key=${config.GOOGLE_API_KEY}&searchType=image&num=3&imgSize=large`;
             
             try {
                 const response = await fetch(searchUrl);
                 const data = await response.json();
                 
                 if (data.items && data.items.length > 0) {
-                    // Get all three image URLs
                     const imageUrls = data.items.map(item => item.link);
-                    
-                    // Use GPT to select the most relevant image
-                    const imageSelectionPrompt = `Given these 3 image URLs for the dish "${dish}", analyze their URLs and select the most likely to be an authentic photo of the dish. Return only the index number (0, 1, or 2) of the best image:\n\n${imageUrls.join('\n')}`;
-                    
-                    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${OPENAI_API_KEY}`
-                        },
-                        body: JSON.stringify({
-                            model: 'gpt-4',
-                            messages: [{
-                                role: 'user',
-                                content: imageSelectionPrompt
-                            }],
-                            temperature: 0.3
-                        })
-                    });
-
-                    const gptData = await gptResponse.json();
-                    const bestImageIndex = parseInt(gptData.choices[0].message.content);
-                    return imageUrls[bestImageIndex] || imageUrls[0];
+                    const bestIndex = await selectBestImage(dish, imageUrls);
+                    return imageUrls[bestIndex];
                 }
             } catch (error) {
                 console.error('Error fetching images:', error);
@@ -266,6 +291,7 @@
             const loadingDiv = document.getElementById('loading');
             const progressBar = document.getElementById('progressBar');
             const menuDiv = document.getElementById('menuResults');
+            const statusText = document.getElementById('statusText');
 
             if (!fileInput.files.length) {
                 alert('Please select an image!');
@@ -278,6 +304,8 @@
             menuDiv.innerHTML = '';
 
             try {
+                statusText.textContent = 'Reading text from image...';
+                
                 // Create a worker and set up progress tracking
                 const worker = await Tesseract.createWorker({
                     logger: m => {
@@ -301,8 +329,8 @@
                     .map(line => line.trim())
                     .filter(line => line.length > 0);
 
-                // Filter dishes using GPT
-                const dishes = await filterDishesWithGPT(textLines);
+                // Filter dishes using Hugging Face
+                const dishes = await filterDishesWithHF(textLines);
 
                 // Process each dish
                 for (const dish of dishes) {
