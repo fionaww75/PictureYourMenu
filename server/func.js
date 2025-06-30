@@ -5,6 +5,16 @@ dotenv.config();
 const imageCache = {};
 const { GOOGLE_API_KEY, GOOGLE_CX } = process.env;
 
+import fs from 'fs';
+import { GoogleAuth } from 'google-auth-library';
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
+
+const location = process.env.GCP_LOCATION;
+const projectId = process.env.GCP_PROJECT_ID;
+const keyFile = path.join('./service-account.json');
+
 export async function searchGoogleImage(dish) {
   if (imageCache[dish]) return imageCache[dish];
 
@@ -15,4 +25,59 @@ export async function searchGoogleImage(dish) {
   const image = data.items?.[0]?.link || null;
   imageCache[dish] = image;
   return image;
+}
+
+export async function extractDishesFromImage(imagePath) {
+  const auth = new GoogleAuth({
+    keyFile,
+    scopes: 'https://www.googleapis.com/auth/cloud-platform',
+  });
+
+  const client = await auth.getClient();
+  const accessToken = await client.getAccessToken();
+
+  const imageBase64 = fs.readFileSync(imagePath).toString('base64');
+  console.log('GCP project:', projectId);
+  console.log('Location:', location);
+
+  const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:generateContent`;
+
+  const payload = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
+          { text: 'Extract only dish names from this menu image. Respond as a JSON array.' }
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 1024,
+    },
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken.token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  const rawText = await res.text();
+
+  if (!res.ok) {
+    console.error('Gemini API Error:', res.status, rawText);
+    throw new Error(`HTTP ${res.status}: ${rawText}`);
+  }
+
+  const result = JSON.parse(rawText);
+  let content = result.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+
+  // 🛠 Strip code block fences like ```json and ```
+  content = content.replace(/```json|```/g, '').trim();
+
+  return JSON.parse(content);
 }
