@@ -8,8 +8,6 @@ const { GOOGLE_API_KEY, GOOGLE_CX } = process.env;
 import fs from 'fs';
 import { GoogleAuth } from 'google-auth-library';
 import path from 'path';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const location = process.env.GCP_LOCATION;
 const projectId = process.env.GCP_PROJECT_ID;
