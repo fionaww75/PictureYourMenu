@@ -1,0 +1,20 @@
+# 🔒 Secrets & credentials
+.env
+service-account.json
+
+# 📦 Node.js dependencies
+node_modules/
+
+# 🧪 Local test artifacts
+results/
+test_menu/
+uploads/
+*.log
+
+# ⚙️ OS-specific stuff
+.DS_Store
+Thumbs.db
+
+# ⚙️ Editor/project config
+.vscode/
+.idea/
