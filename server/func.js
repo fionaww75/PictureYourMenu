@@ -2,16 +2,22 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const imageCache = {};
-const { GOOGLE_API_KEY, GOOGLE_CX } = process.env;
-
 import fs from 'fs';
 import { GoogleAuth } from 'google-auth-library';
 import path from 'path';
 
-const location = process.env.GCP_LOCATION;
-const projectId = process.env.GCP_PROJECT_ID;
+const { GOOGLE_API_KEY, GOOGLE_CX, GCP_LOCATION, GCP_PROJECT_ID, GOOGLE_SERVICE_ACCOUNT } = process.env;
+
+const imageCache = {};
+const location = GCP_LOCATION;
+const projectId = GCP_PROJECT_ID;
 const keyFile = path.join('./service-account.json');
+
+// ✅ Step 1: Write the service account key from env var if needed
+if (GOOGLE_SERVICE_ACCOUNT && !fs.existsSync(keyFile)) {
+  console.log('[Init] Writing service-account.json from environment variable...');
+  fs.writeFileSync(keyFile, Buffer.from(GOOGLE_SERVICE_ACCOUNT, 'base64'));
+}
 
 export async function searchGoogleImage(dish) {
   if (imageCache[dish]) return imageCache[dish];
@@ -64,17 +70,15 @@ export async function extractDishesFromImage(imagePath) {
     },
     body: JSON.stringify(payload),
   });
+
   const rawText = await res.text();
 
   if (!res.ok) {
-    console.error('Gemini API Error:', res.status, rawText);
+    console.error('[Gemini API Error]', res.status, rawText);
     throw new Error(`HTTP ${res.status}: ${rawText}`);
   }
 
-  const result = JSON.parse(rawText);
-  let content = result.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-
-  // 🛠 Strip code block fences like ```json and ```
+  let content = JSON.parse(rawText).candidates?.[0]?.content?.parts?.[0]?.text || '[]';
   content = content.replace(/```json|```/g, '').trim();
 
   return JSON.parse(content);
