@@ -1,5 +1,6 @@
+Pillow>=9.5.0
+pytesseract==0.3.10 
 Flask==3.1.0
 flask-cors==5.0.1
-pillow 
-pytesseract 
-requests 
+requests
+easyocr
