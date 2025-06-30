@@ -206,10 +206,10 @@
       formData.append('image', fileInput.files[0]);
 
       try {
-        const res = await fetch('http://localhost:3000/api/dishes', {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch('https://pictureyourmenu-backend.onrender.com/api/dishes', {
+  method: 'POST',
+  body: formData
+});
 
         if (!res.ok) {
           throw new Error(`Server error: ${res.status}`);
