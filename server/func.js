@@ -29,12 +29,17 @@ export async function searchGoogleImage(dish) {
 
   try {
     const res = await fetch(url);
+    const resClone = res.clone();
+
+    if (!res.ok) {
+      const errorText = await resClone.text();
+      console.error(`❌ HTTP ${res.status}`, errorText);
+      return null;
+    }
 
     const data = await res.json();
     const fallbackImage = data.items?.[0]?.link || null;
-
     const blockedDomains = ['instagram.com', 'tiktok.com', 'facebook.com', 'pinterest.com', 'twitter.com'];
-
     const firstValid = data.items?.find(item =>
       !blockedDomains.some(domain => item.link.includes(domain))
     );
@@ -47,6 +52,7 @@ export async function searchGoogleImage(dish) {
       console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
       console.warn(`⚠️ No clean image found. Using fallback: ${fallbackImage}`);
     } else {
+      console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
       console.error(`❌ No image found for: ${dish}`);
     }
 
