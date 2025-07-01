@@ -52,7 +52,16 @@ export async function extractDishesFromImage(imagePath) {
         role: 'user',
         parts: [
           { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-          { text: 'Extract only dish names from this menu image. Respond as a JSON array.' }
+          { text: `You are a smart assistant.
+
+This is an image of a restaurant menu. Your task is to extract only the **dish names** and return them in a **valid JSON array**.
+
+🧾 Instructions:
+- Only include actual **dish names** (no prices, descriptions, or categories).
+- If the menu is bilingual, keep only the dish names in the **first-listed language**.
+- Ignore any notes about **ingredients**, **allergens**, or **sides**.
+- Do not return extra text or explanations — just a JSON array like:
+  ["Dish One", "Dish Two", "Dish Three"]` }
         ],
       },
     ],
