@@ -221,7 +221,7 @@
         const fullData = Object.entries(data);
         console.log('[3] Received dish results:', fullData);
 
-        first3.forEach(([dish, imageUrl]) => {
+        fullData.forEach(([dish, imageUrl]) => {
           const div = document.createElement('div');
           div.className = 'menu-item';
           div.innerHTML = `
