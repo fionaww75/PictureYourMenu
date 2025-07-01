@@ -25,23 +25,29 @@ export async function searchGoogleImage(dish) {
     return imageCache[dish];
   }
 
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + ' dish')}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=1`;
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + ' dish')}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=10`;
 
   try {
     const res = await fetch(url);
 
     const data = await res.json();
     const fallbackImage = data.items?.[0]?.link || null;
-    const firstValid = data.items?.find(item => !item.link.includes('instagram.com'));
+
+    const blockedDomains = ['instagram.com', 'tiktok.com', 'facebook.com', 'pinterest.com', 'twitter.com'];
+
+    const firstValid = data.items?.find(item =>
+      !blockedDomains.some(domain => item.link.includes(domain))
+    );
+
     const image = firstValid?.link || fallbackImage;
-    
-    console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
+
     if (firstValid) {
-      console.log(`[4] Found image for "${dish}": ${firstValid.link}`);
+      console.log(`✅ Selected non-blocked image: ${firstValid.link}`);
     } else if (fallbackImage) {
-      console.warn(`[4] All images were from Instagram. Using fallback: ${fallbackImage}`);
+      console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
+      console.warn(`⚠️ No clean image found. Using fallback: ${fallbackImage}`);
     } else {
-      console.warn(`[4] No image found for "${dish}".`);
+      console.error(`❌ No image found for: ${dish}`);
     }
 
     if (image) {
@@ -84,18 +90,19 @@ export async function extractDishesFromImage(imagePath) {
           },
           {
             text: `
-Extract dish names only from this menu image and return a valid JSON array.
+You are a smart assistant helping extract clean, searchable dish names from a restaurant menu image.
 
-Guidelines:
-- No descriptions, categories, or explanations
-- Just a clean JSON array of dish names
-- If the menu is bilingual, keep only the dish names in the **first-listed language**.
-- If the menu includes section names(e.g. "Appetizers", "Main Courses", "Desserts"), ignore them.
-- Keep the output short and within model limits
-- Do not include Markdown formatting like \`\`\`
+Instructions:
+- Return only a JSON array of dish names.
+- Dish names should be **short, generic, and commonly recognizable**.
+- Remove text like:
+  - Descriptions (“BIO”, “à partager... ou pas”)
+  - Portion sizes or marketing words
+  - Special formatting or emojis
+- Prefer names that would yield **reliable search results** (e.g., “Entrecôte”, “Tiramisu”).
 
 Example:
-["Dish 1", "Dish 2", "Dish 3"]
+["Entrecôte", "La Côte de bœuf", "Risotto aux champignons"]
 `,
           },
         ],

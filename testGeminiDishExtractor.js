@@ -2,7 +2,7 @@ import { extractDishesFromImage } from './server/func.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const imagePath = './test_menu/menu_6.jpeg'; // ← Replace with your image path
+const imagePath = './test_menu/menu_2.jpeg'; // ← Replace with your image path
 
 (async () => {
   try {
