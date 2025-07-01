@@ -31,8 +31,18 @@ export async function searchGoogleImage(dish) {
     const res = await fetch(url);
 
     const data = await res.json();
+    const fallbackImage = data.items?.[0]?.link || null;
     const firstValid = data.items?.find(item => !item.link.includes('instagram.com'));
-    const image = firstValid?.link || null;
+    const image = firstValid?.link || fallbackImage;
+    
+    console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
+    if (firstValid) {
+      console.log(`[4] Found image for "${dish}": ${firstValid.link}`);
+    } else if (fallbackImage) {
+      console.warn(`[4] All images were from Instagram. Using fallback: ${fallbackImage}`);
+    } else {
+      console.warn(`[4] No image found for "${dish}".`);
+    }
 
     if (image) {
       console.log(`Found image for "${dish}": ${image}`);
