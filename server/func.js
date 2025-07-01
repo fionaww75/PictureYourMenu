@@ -51,7 +51,7 @@ export async function searchGoogleImage(dish) {
 }
 
 export async function extractDishesFromImage(imagePath) {
-  console.log('Extracting dishes from image...');
+  console.log('🧠 Extracting dishes from image...');
   const auth = new GoogleAuth({
     keyFile,
     scopes: 'https://www.googleapis.com/auth/cloud-platform',
@@ -71,23 +71,31 @@ export async function extractDishesFromImage(imagePath) {
       {
         role: 'user',
         parts: [
-          { inlineData: { mimeType: 'image/jpeg', data: imageBase64 } },
-          { text: `You are a smart assistant.
+          {
+            inlineData: { mimeType: 'image/jpeg', data: imageBase64 },
+          },
+          {
+            text: `
+Extract dish names only from this menu image and return a valid JSON array.
 
-This is an image of a restaurant menu. Your task is to extract only the **dish names** and return them in a **valid JSON array**.
-
-🧾 Instructions:
-- Only include actual **dish names** (no prices, descriptions, or categories).
+Guidelines:
+- No descriptions, categories, or explanations
+- Just a clean JSON array of dish names
 - If the menu is bilingual, keep only the dish names in the **first-listed language**.
-- Ignore any notes about **ingredients**, **allergens**, or **sides**.
-- Do not return extra text or explanations — just a JSON array like:
-  ["Dish One", "Dish Two", "Dish Three"]` }
+- If the menu includes section names(e.g. "Appetizers", "Main Courses", "Desserts"), ignore them.
+- Keep the output short and within model limits
+- Do not include Markdown formatting like \`\`\`
+
+Example:
+["Dish 1", "Dish 2", "Dish 3"]
+`,
+          },
         ],
       },
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
     },
   };
 
@@ -99,18 +107,58 @@ This is an image of a restaurant menu. Your task is to extract only the **dish n
     },
     body: JSON.stringify(payload),
   });
-  console.log('Got response from Gemini API:', res);
 
+  console.log('📩 Got response from Gemini API.');
   const rawText = await res.text();
+  let rawResult;
 
-  if (!res.ok) {
-    console.error('[Gemini API Error]', res.status, rawText);
-    throw new Error(`HTTP ${res.status}: ${rawText}`);
+  try {
+    rawResult = JSON.parse(rawText);
+  } catch (err) {
+    console.error('❌ Failed to parse Gemini API response JSON:', rawText);
+    throw err;
   }
 
-  let content = JSON.parse(rawText).candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-  content = content.replace(/```json|```/g, '').trim();
-  console.log('Extracted menu items:', content);
+  const finishReason = rawResult.candidates?.[0]?.finishReason;
+  if (finishReason === 'MAX_TOKENS') {
+    console.warn('⚠️ Gemini stopped early due to token limit. Output may be incomplete.');
+  }
 
-  return JSON.parse(content);
+  let content = rawResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  console.log('📦 Gemini raw text output:\n', content);
+
+  // Clean the response
+  content = content
+    .replace(/```json|```/g, '')
+    .replace(/\n/g, '')
+    .replace(/\\"/g, "'")
+    .replace(/""/g, '"')
+    .replace(/"([^"]*)"\s*"/g, '"$1 ')
+    .trim();
+
+  // Auto-close broken arrays
+  if (!content.trim().startsWith('[')) {
+    console.warn('⚠️ Gemini output was empty or not a JSON array. Returning empty dish list.');
+    return {
+      dishes: [],
+      error: 'Gemini returned no usable output. Please try a smaller/clearer menu.'
+    };  // graceful fallback instead of throwing
+  }
+  if (!content.endsWith(']')) {
+    content = content.replace(/,\s*$/, '');
+    content += ']';
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    if (finishReason === 'MAX_TOKENS') {
+      console.warn(`⚠️ Parsed incomplete dish list (${parsed.length} items).`);
+    }
+    console.log('✅ Extracted dish names:', parsed);
+    return parsed;
+  } catch (err) {
+    console.error('❌ Final parse failed:', content);
+    throw err;
+  }
 }

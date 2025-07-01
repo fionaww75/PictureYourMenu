@@ -1,11 +1,15 @@
-import { extractDishesFromImage } from './server/geminiDishExtractor.js';
+import { extractDishesFromImage } from './server/func.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const testImage = './test_menu/Restaurant-Menu-Template-edit-online.png'; // replace with your image path
+const imagePath = './test_menu/menu_6.jpeg'; // ← Replace with your image path
 
-extractDishesFromImage(testImage)
-  .then(dishes => {
-    console.log('✅ Gemini dish names:\n', dishes);
-  })
-  .catch(err => {
+(async () => {
+  try {
+    console.log('Extracting dishes from image...');
+    const dishes = await extractDishesFromImage(imagePath);
+    console.log('\n✅ Extracted Dishes:', dishes);
+  } catch (err) {
     console.error('❌ Gemini test failed:', err);
-  });
+  }
+})();
