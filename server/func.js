@@ -99,7 +99,7 @@ This is an image of a restaurant menu. Your task is to extract only the **dish n
     },
     body: JSON.stringify(payload),
   });
-  console.log('Got response from Gemini API.');
+  console.log('Got response from Gemini API:', res);
 
   const rawText = await res.text();
 
