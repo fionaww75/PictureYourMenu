@@ -20,18 +20,38 @@ if (GOOGLE_SERVICE_ACCOUNT && !fs.existsSync(keyFile)) {
 }
 
 export async function searchGoogleImage(dish) {
-  if (imageCache[dish]) return imageCache[dish];
+  if (imageCache[dish]) {
+    console.log(`[Cache Hit] Returning cached image for: ${dish}`);
+    return imageCache[dish];
+  }
 
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + ' dish')}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=1`;
+  console.log(`[1] Fetching image for dish: "${dish}"`);
+  console.log(`[2] Request URL: ${url}`);
 
-  const res = await fetch(url);
-  const data = await res.json();
-  const image = data.items?.[0]?.link || null;
-  imageCache[dish] = image;
-  return image;
+  try {
+    const res = await fetch(url);
+    console.log('[3] Got response from Google Images API.');
+
+    const data = await res.json();
+    const image = data.items?.[0]?.link || null;
+
+    if (image) {
+      console.log(`[4] Found image for "${dish}": ${image}`);
+    } else {
+      console.warn(`[4] No image found for "${dish}".`);
+    }
+
+    imageCache[dish] = image;
+    return image;
+  } catch (err) {
+    console.error(`[X] Failed to fetch image for "${dish}":`, err);
+    return null;
+  }
 }
 
 export async function extractDishesFromImage(imagePath) {
+  console.log('Extracting dishes from image...');
   const auth = new GoogleAuth({
     keyFile,
     scopes: 'https://www.googleapis.com/auth/cloud-platform',
@@ -79,6 +99,7 @@ This is an image of a restaurant menu. Your task is to extract only the **dish n
     },
     body: JSON.stringify(payload),
   });
+  console.log('Got response from Gemini API.');
 
   const rawText = await res.text();
 
@@ -89,6 +110,7 @@ This is an image of a restaurant menu. Your task is to extract only the **dish n
 
   let content = JSON.parse(rawText).candidates?.[0]?.content?.parts?.[0]?.text || '[]';
   content = content.replace(/```json|```/g, '').trim();
+  console.log('Extracted menu items:', content);
 
   return JSON.parse(content);
 }
