@@ -15,7 +15,8 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
     const dishes = await extractDishesFromImage(imagePath);
     const results = {};
 
-    for (const dish of dishes) {
+    for (const [i, dish] of dishes.entries()) {
+      console.log('[Backend] Searching for image of number', i, '–', dish);
       const image = await searchGoogleImage(dish);
       results[dish] = image;
     }

@@ -26,20 +26,18 @@ export async function searchGoogleImage(dish) {
   }
 
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(dish + ' dish')}&cx=${GOOGLE_CX}&key=${GOOGLE_API_KEY}&searchType=image&num=1`;
-  console.log(`[1] Fetching image for dish: "${dish}"`);
-  console.log(`[2] Request URL: ${url}`);
 
   try {
     const res = await fetch(url);
-    console.log('[3] Got response from Google Images API.');
 
     const data = await res.json();
-    const image = data.items?.[0]?.link || null;
+    const firstValid = data.items?.find(item => !item.link.includes('instagram.com'));
+    const image = firstValid?.link || null;
 
     if (image) {
-      console.log(`[4] Found image for "${dish}": ${image}`);
+      console.log(`Found image for "${dish}": ${image}`);
     } else {
-      console.warn(`[4] No image found for "${dish}".`);
+      console.warn(`No image found for "${dish}".`);
     }
 
     imageCache[dish] = image;
