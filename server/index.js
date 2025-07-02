@@ -12,6 +12,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use((req, res, next) => {
+  console.log(`[Request] ${req.method} ${req.url} from ${req.ip}`);
+  next();
+});
 app.use(express.static('public'));
 app.use(cors());
 app.use(express.json());
