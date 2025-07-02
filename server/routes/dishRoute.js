@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { extractDishesFromImage } from '../func.js';
-import { searchGoogleImage } from '../func.js';
+import { searchGoogleImages } from '../func.js';
 import fs from 'fs';
 
 const upload = multer({ dest: 'uploads/' });
@@ -17,7 +17,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
 
     for (const [i, dish] of dishes.entries()) {
       console.log('[Backend] Searching for image of number', i, '–', dish);
-      const image = await searchGoogleImage(dish);
+      const image = await searchGoogleImages(dish);
       results[dish] = image;
     }
 
