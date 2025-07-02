@@ -19,9 +19,9 @@ if (GOOGLE_SERVICE_ACCOUNT && !fs.existsSync(keyFile)) {
   fs.writeFileSync(keyFile, Buffer.from(GOOGLE_SERVICE_ACCOUNT, 'base64'));
 }
 
-export async function searchGoogleImage(dish) {
+export async function searchGoogleImages(dish) {
   if (imageCache[dish]) {
-    console.log(`[Cache Hit] Returning cached image for: ${dish}`);
+    console.log(`[Cache Hit] Returning cached images for: ${dish}`);
     return imageCache[dish];
   }
 
@@ -34,39 +34,39 @@ export async function searchGoogleImage(dish) {
     if (!res.ok) {
       const errorText = await resClone.text();
       console.error(`❌ HTTP ${res.status}`, errorText);
-      return null;
+      return [];
     }
 
     const data = await res.json();
-    const fallbackImage = data.items?.[0]?.link || null;
-    const blockedDomains = ['instagram.com', 'tiktok.com', 'facebook.com', 'pinterest.com', 'twitter.com'];
-    const firstValid = data.items?.find(item =>
-      !blockedDomains.some(domain => item.link.includes(domain))
-    );
 
-    const image = firstValid?.link || fallbackImage;
+    const blockedDomains = [
+      'lookaside.', 'instagram.com', 'tiktok.com',
+      'facebook.com', 'pinterest.com', 'twitter.com'
+    ];
 
-    if (firstValid) {
-      console.log(`✅ Selected non-blocked image: ${firstValid.link}`);
-    } else if (fallbackImage) {
-      console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
-      console.warn(`⚠️ No clean image found. Using fallback: ${fallbackImage}`);
-    } else {
-      console.log('[Debug] All returned image URLs:', data.items?.map(i => i.link));
-      console.error(`❌ No image found for: ${dish}`);
+    const cleanImages = (data.items || [])
+      .map(item => item.link)
+      .filter(link => link && !blockedDomains.some(domain => link.includes(domain)));
+
+    let selectedImages = cleanImages.slice(0, 3);
+
+    // If no clean images found, fall back to whatever is available
+    if (selectedImages.length === 0 && data.items?.length) {
+      console.warn(`⚠️ No clean image found. Using fallback(s).`);
+      selectedImages = data.items.slice(0, 3).map(item => item.link);
     }
 
-    if (image) {
-      console.log(`Found image for "${dish}": ${image}`);
+    if (selectedImages.length) {
+      console.log(`✅ Selected images for "${dish}":`, selectedImages);
     } else {
-      console.warn(`No image found for "${dish}".`);
+      console.error(`❌ No image found for "${dish}".`);
     }
 
-    imageCache[dish] = image;
-    return image;
+    imageCache[dish] = selectedImages;
+    return selectedImages;
   } catch (err) {
-    console.error(`[X] Failed to fetch image for "${dish}":`, err);
-    return null;
+    console.error(`[X] Failed to fetch images for "${dish}":`, err);
+    return [];
   }
 }
 

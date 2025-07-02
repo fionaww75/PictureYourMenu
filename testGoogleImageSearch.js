@@ -1,4 +1,4 @@
-import { searchGoogleImage } from './server/func.js';
+import { searchGoogleImages } from './server/func.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,8 +20,8 @@ const testDishes = ['Hure de tête de veau gratinée', 'sauce ravigote']
 async function testMultipleDishes() {
   for (const dish of testDishes) {
     try {
-      const url = await searchGoogleImage(dish);
-      console.log(`✅ Image URL for "${dish}":\n${url}\n`);
+      const URLs = await searchGoogleImages(dish);
+      console.log(`✅ Image URLs for "${dish}":\n${URLs.join('\n')}\n`);
     } catch (err) {
       console.error(`❌ Failed to fetch image for "${dish}":`, err);
     }
