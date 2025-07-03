@@ -429,7 +429,7 @@ for (const [dish, imageData] of fullData) {
         // dishIndex++;
         // const progress = 40 + Math.floor((dishIndex / totalDishes) * 50);
         // setProgress(progress);
-      }
+      
     
     // setProgress(100); // done!
   } catch (err) {
@@ -442,20 +442,23 @@ for (const [dish, imageData] of fullData) {
     console.log('[4] Image processing complete');
   }
 
-async function processDemoImage() {
-  const sampleUrl = '/demo_menu.jpeg'; // or full URL if not served locally
-
-  const response = await fetch(sampleUrl);
-  const blob = await response.blob();
-
-  const file = new File([blob], 'Menu-FR-Restaurant-Lescargot-Montorgueil.jpeg', { type: 'image/jpeg' });
-
-  // Simulate selecting the file
-  const dataTransfer = new DataTransfer();
-  dataTransfer.items.add(file);
-  const fileInput = document.getElementById('imageInput');
-  fileInput.files = dataTransfer.files;
 }
+    async function processDemoImage() {
+      const sampleUrl = '/demo_menu.jpeg'; // or full URL if not served locally
+
+      const response = await fetch(sampleUrl);
+      const blob = await response.blob();
+
+      const file = new File([blob], 'Menu-FR-Restaurant-Lescargot-Montorgueil.jpeg', { type: 'image/jpeg' });
+
+      // Simulate selecting the file
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      const fileInput = document.getElementById('imageInput');
+      fileInput.files = dataTransfer.files;
+
+      fileInput.dispatchEvent(new Event('change'));
+    }
 </script>
 <footer style="text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #888;">
   <p>
