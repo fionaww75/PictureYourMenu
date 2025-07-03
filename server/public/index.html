@@ -77,8 +77,9 @@
     }
 
     .file-input-wrapper {
-        position: relative;
-        flex: 1;
+      flex: 1 1 200px;
+      min-width: 150px;
+      max-width: 300px;
     }
 
     .file-input-wrapper input[type="file"] {
@@ -111,8 +112,14 @@
     }
 
     #fileName {
-        margin-left: 1rem;
-        color: #666;
+      margin-left: 1rem;
+      color: #666;
+      max-width: 150px;       /* limit width */
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: middle;
     }
 
     button {
@@ -291,7 +298,8 @@
   <script>
     document.getElementById('imageInput').addEventListener('change', (e) => {
       const fileName = e.target.files[0]?.name || '';
-      document.getElementById('fileName').textContent = fileName;
+      const shortName = fileName.length > 25 ? fileName.slice(0, 15) + '...' + fileName.slice(8) : fileName;
+      document.getElementById('fileName').textContent = shortName;
     });
 
     function setProgress(percent) {
