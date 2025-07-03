@@ -191,7 +191,7 @@ Example:
   if (!content.trim().startsWith('[')) {
     return {
       dishes: [],
-      error: 'Could not extract dish names — Can you upload a simpler or higher quality image?.',
+      error: 'Could not extract dish names — Can you upload a simpler or higher quality image?',
     };
   }
 
