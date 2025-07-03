@@ -31,13 +31,22 @@ export async function searchGoogleImages(dish) {
     const res = await fetch(url);
     const resClone = res.clone();
 
+    const data = await res.json();
+
+    // ❗ Move this check here — after parsing JSON
+    if (data.error?.errors?.[0]?.reason === 'dailyLimitExceeded') {
+      console.error('🚫 Google API quota exceeded.');
+      return {
+        images: [],
+        error: 'Google API usage limit reached today. Try again tomorrow!',
+      };
+    }
+
     if (!res.ok) {
       const errorText = await resClone.text();
       console.error(`❌ HTTP ${res.status}`, errorText);
-      return [];
+      return { images: [], error: 'Failed to fetch images.' };
     }
-
-    const data = await res.json();
 
     const blockedDomains = [
       'lookaside.', 'instagram.com', 'tiktok.com',
@@ -50,7 +59,6 @@ export async function searchGoogleImages(dish) {
 
     let selectedImages = cleanImages.slice(0, 3);
 
-    // If no clean images found, fall back to whatever is available
     if (selectedImages.length === 0 && data.items?.length) {
       console.warn(`⚠️ No clean image found. Using fallback(s).`);
       selectedImages = data.items.slice(0, 3).map(item => item.link);
@@ -63,10 +71,13 @@ export async function searchGoogleImages(dish) {
     }
 
     imageCache[dish] = selectedImages;
-    return selectedImages;
+    return { images: selectedImages };
   } catch (err) {
     console.error(`[X] Failed to fetch images for "${dish}":`, err);
-    return [];
+    return {
+      images: [],
+      error: 'Image search failed. Note that you need a out-of-china IP address to use this service.',
+    };
   }
 }
 
@@ -131,13 +142,33 @@ Example:
 
   console.log('📩 Got response from Gemini API.');
   const rawText = await res.text();
-  let rawResult;
+  
+  if (!res.ok) {
+    console.error(`❌ Gemini error: ${res.status} - ${rawText}`);
 
+    // Handle known quota errors
+    if (res.status === 429 || rawText.includes('quota')) {
+      return {
+        dishes: [],
+        error: 'API usage limit reached today. Try again tomorrow!',
+      };
+    }
+
+    return {
+      dishes: [],
+      error: 'Gemini API returned an error. Try again later.',
+    };
+  }
+
+  let rawResult;
   try {
     rawResult = JSON.parse(rawText);
   } catch (err) {
     console.error('❌ Failed to parse Gemini API response JSON:', rawText);
-    throw err;
+    return {
+      dishes: [],
+      error: 'Gemini response was invalid. Please try with a clearer image.',
+    };
   }
 
   const finishReason = rawResult.candidates?.[0]?.finishReason;
@@ -146,7 +177,6 @@ Example:
   }
 
   let content = rawResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
   console.log('📦 Gemini raw text output:\n', content);
 
   // Clean the response
@@ -158,14 +188,13 @@ Example:
     .replace(/"([^"]*)"\s*"/g, '"$1 ')
     .trim();
 
-  // Auto-close broken arrays
   if (!content.trim().startsWith('[')) {
-    console.warn('⚠️ Gemini output was empty or not a JSON array. Returning empty dish list.');
     return {
       dishes: [],
-      error: 'Gemini returned no usable output. Please try a smaller/clearer menu.'
-    };  // graceful fallback instead of throwing
+      error: 'Could not extract dish names — Can you upload a simpler or higher quality image?.',
+    };
   }
+
   if (!content.endsWith(']')) {
     content = content.replace(/,\s*$/, '');
     content += ']';
@@ -173,13 +202,20 @@ Example:
 
   try {
     const parsed = JSON.parse(content);
-    if (finishReason === 'MAX_TOKENS') {
-      console.warn(`⚠️ Parsed incomplete dish list (${parsed.length} items).`);
+    if (!parsed.length) {
+      return {
+        dishes: [],
+        error: 'Can you upload a simpler or higher quality image?',
+      };
     }
+
     console.log('✅ Extracted dish names:', parsed);
-    return parsed;
+    return { dishes: parsed };
   } catch (err) {
     console.error('❌ Final parse failed:', content);
-    throw err;
+    return {
+      dishes: [],
+      error: 'Can you upload a simpler or higher quality image?',
+    };
   }
 }

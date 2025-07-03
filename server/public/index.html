@@ -320,13 +320,25 @@ const countdown = setInterval(() => {
 
     let totalDishes = fullData.length;
     let dishIndex = 0;
+    setProgress(100); // done!
 
-    for (const [dish, imageUrls] of fullData) {
+    for (const [dish, imageData] of fullData) {
       const div = document.createElement('div');
       div.className = 'menu-item';
 
       const imageScroll = document.createElement('div');
       imageScroll.className = 'image-scroll';
+
+      let imageUrls = [];
+      let errorMsg = '';
+
+      // 🧠 Check if imageData is the new format (object with images + error)
+      if (Array.isArray(imageData)) {
+        imageUrls = imageData;
+      } else if (imageData && typeof imageData === 'object') {
+        imageUrls = imageData.images || [];
+        errorMsg = imageData.error || '';
+      }
 
       const imagePromises = imageUrls.map(url => createImageElement(url, dish));
       const images = await Promise.all(imagePromises);
@@ -335,27 +347,36 @@ const countdown = setInterval(() => {
         if (img) imageScroll.appendChild(img);
       });
 
+      // 📛 Show error message or fallback placeholder
       if (!images.some(img => img)) {
-        const placeholder = document.createElement('img');
-        placeholder.src = 'placeholder.jpg';
-        placeholder.alt = `No image for ${dish}`;
-        imageScroll.appendChild(placeholder);
+        if (errorMsg) {
+          const errorText = document.createElement('p');
+          errorText.textContent = errorMsg;
+          errorText.style.color = '#aa0000';
+          errorText.style.fontSize = '0.85rem';
+          errorText.style.margin = '0.5rem';
+          imageScroll.appendChild(errorText);
+        } else {
+          const placeholder = document.createElement('img');
+          placeholder.src = 'placeholder.jpg';
+          placeholder.alt = `No image for ${dish}`;
+          imageScroll.appendChild(placeholder);
+        }
       }
 
       const dishName = document.createElement('p');
       dishName.innerHTML = `<strong>${dish}</strong>`;
-
       div.appendChild(imageScroll);
       div.appendChild(dishName);
       menuDiv.appendChild(div);
 
-      // Update progress for each dish
-      dishIndex++;
-      const progress = 40 + Math.floor((dishIndex / totalDishes) * 50); // from 40% to 90%
-      setProgress(progress);
+      // 🔄 Progress update
+      // dishIndex++;
+      // const progress = 40 + Math.floor((dishIndex / totalDishes) * 50);
+      // setProgress(progress);
     }
-
-    setProgress(100); // done!
+    
+    // setProgress(100); // done!
   } catch (err) {
     console.error('[X] Error during fetch:', err);
     alert('Failed to process image.');
