@@ -70,10 +70,29 @@
     }
 
     .upload-section {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .top-inputs {
+      display: flex;
+      flex-grow: 1;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .demo-wrapper {
+      flex-shrink: 0;
+      width: 120px;
+      height: 90px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 6px;
+      cursor: pointer;
     }
 
     .file-input-wrapper {
@@ -264,19 +283,20 @@
   <div class="container">
     <h2>Picture Your Menu</h2>
     <div class="upload-section">
-      <div class="demo-wrapper" onclick="processDemoImage()">
-        <img src="/demo_menu.jpeg" alt="Try sample menu" class="demo-image" />
-        <div class="demo-overlay">Try It</div>
+      <div class="top-inputs">
+        <div class="file-input-wrapper">
+          <input type="file" id="imageInput" accept="image/*" />
+          <label for="imageInput">
+            📷 Choose My Menu <span id="fileName"></span>
+          </label>
+        </div>
+    
+        <div class="demo-wrapper" onclick="processDemoImage()">
+          <img src="/demo_menu.jpeg" alt="Try sample menu" class="demo-image" />
+          <div class="demo-overlay">Try it</div>
+        </div>
       </div>
-      <div class="file-input-wrapper">
-        <input type="file" id="imageInput" accept="image/*" />
-        <label for="imageInput">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#555" viewBox="0 0 16 16" style="margin-right: 4px;">
-            <path d="M10.5 2a.5.5 0 0 1 .5.5V3h2a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2v-.5a.5.5 0 0 1 .5-.5h5zM4.118 3 4 3.059V3h8v.059L11.882 3H4.118zM8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
-          </svg>
-          Choose My Menu <span id="fileName"></span>
-        </label>
-      </div>
+    
       <button onclick="processImage()" id="processButton">See Pictures</button>
     </div>
     
