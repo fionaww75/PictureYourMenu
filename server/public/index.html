@@ -283,6 +283,9 @@
 
     <h3>Your dishes on the menu</h3>
     <div id="menuResults"></div>
+    <div id="doneIndicator" style="display: none; text-align: center; margin-top: 1rem; color: #555; font-style: italic;">
+      ------------------------- That’s the whole menu – Enjoy! -------------------------
+    </div>
   </div>
 
   <script>
@@ -311,12 +314,14 @@
     }
 
     async function processImage() {
+      document.getElementById('doneIndicator').style.display = 'none';
       const fileInput = document.getElementById('imageInput');
       const processButton = document.getElementById('processButton');
       const loadingDiv = document.getElementById('loading');
       const progressBar = document.getElementById('progressBar');
       const menuDiv = document.getElementById('menuResults');
       const statusText = document.getElementById('statusText');
+      
 
       console.log('[1] Start image processing');
       if (!fileInput.files.length) {
@@ -438,7 +443,7 @@ for (const [dish, imageData] of fullData) {
   } finally {
     processButton.disabled = false;
     loadingDiv.style.display = 'none';
-    
+    document.getElementById('doneIndicator').style.display = 'block';
     console.log('[4] Image processing complete');
   }
 
