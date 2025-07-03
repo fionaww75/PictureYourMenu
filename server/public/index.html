@@ -322,56 +322,68 @@
 
       let totalDishes = fullData.length;
       let dishIndex = 0;
-      setProgress(100); // done!
-      setProgress(0); // reset for next time
 
-      for (const [dish, imageData] of fullData) {
-        const div = document.createElement('div');
-        div.className = 'menu-item';
+      let firstImageShown = false;
 
-        const imageScroll = document.createElement('div');
-        imageScroll.className = 'image-scroll';
+for (const [dish, imageData] of fullData) {
+  const div = document.createElement('div');
+  div.className = 'menu-item';
 
-        let imageUrls = [];
-        let errorMsg = '';
+  const imageScroll = document.createElement('div');
+  imageScroll.className = 'image-scroll';
 
-        // 🧠 Check if imageData is the new format (object with images + error)
-        if (Array.isArray(imageData)) {
-          imageUrls = imageData;
-        } else if (imageData && typeof imageData === 'object') {
-          imageUrls = imageData.images || [];
-          errorMsg = imageData.error || '';
-        }
+  let imageUrls = [];
+  let errorMsg = '';
 
-        const imagePromises = imageUrls.map(url => createImageElement(url, dish));
-        const images = await Promise.all(imagePromises);
+  if (Array.isArray(imageData)) {
+    imageUrls = imageData;
+  } else if (imageData && typeof imageData === 'object') {
+    imageUrls = imageData.images || [];
+    errorMsg = imageData.error || '';
+  }
 
-        images.forEach(img => {
-          if (img) imageScroll.appendChild(img);
-        });
+  const imagePromises = imageUrls.map(url => createImageElement(url, dish));
+  const images = await Promise.all(imagePromises);
 
-        // 📛 Show error message or fallback placeholder
-        if (!images.some(img => img)) {
-          if (errorMsg) {
-            const errorText = document.createElement('p');
-            errorText.textContent = errorMsg;
-            errorText.style.color = '#aa0000';
-            errorText.style.fontSize = '0.85rem';
-            errorText.style.margin = '0.5rem';
-            imageScroll.appendChild(errorText);
-          } else {
-            const placeholder = document.createElement('img');
-            placeholder.src = 'placeholder.jpg';
-            placeholder.alt = `No image for ${dish}`;
-            imageScroll.appendChild(placeholder);
-          }
-        }
+  images.forEach(img => {
+    if (img) {
+      if (!firstImageShown) {
+        // 🎯 Hide loading UI on first image
+        clearInterval(countdown);
+        statusText.textContent = '';
+        setProgress(100);
+        setTimeout(() => {
+          loadingDiv.style.display = 'none';
+          setProgress(0);
+        }, 300); // optional tiny delay for 100% flash
+        firstImageShown = true;
+      }
+      imageScroll.appendChild(img);
+    }
+  });
 
-        const dishName = document.createElement('p');
-        dishName.innerHTML = `<strong>${dish}</strong>`;
-        div.appendChild(imageScroll);
-        div.appendChild(dishName);
-        menuDiv.appendChild(div);
+  if (!images.some(img => img)) {
+    if (errorMsg) {
+      const errorText = document.createElement('p');
+      errorText.textContent = errorMsg;
+      errorText.style.color = '#aa0000';
+      errorText.style.fontSize = '0.85rem';
+      errorText.style.margin = '0.5rem';
+      imageScroll.appendChild(errorText);
+    } else {
+      const placeholder = document.createElement('img');
+      placeholder.src = 'placeholder.jpg';
+      placeholder.alt = `No image for ${dish}`;
+      imageScroll.appendChild(placeholder);
+    }
+  }
+
+  const dishName = document.createElement('p');
+  dishName.innerHTML = `<strong>${dish}</strong>`;
+  div.appendChild(imageScroll);
+  div.appendChild(dishName);
+  menuDiv.appendChild(div);
+}
 
         // 🔄 Progress update
         // dishIndex++;
