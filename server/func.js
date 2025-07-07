@@ -237,7 +237,7 @@ export async function translateDishNames(dishList) {
   const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:generateContent`;
 
   const prompt = `
-You are a helpful assistant tasked with translating dish names from French or English into **Chinese**, the way they would appear on a bilingual restaurant menu.
+You are a helpful assistant tasked with translating dish names from their original language into **Chinese**, the way they would appear on a bilingual restaurant menu.
 
 - Only return the translated names, not the originals.
 - Keep the translations natural and culturally appropriate.
@@ -276,23 +276,35 @@ ${JSON.stringify(dishList)}
     const rawText = await res.text();
     console.log('📩 Gemini translation response:\n', rawText);
 
-    const parsed = JSON.parse(rawText);
-    let content = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Cleanup
-    content = content.replace(/```json|```/g, '').trim();
-
-    // Auto-close JSON array
-    if (!content.endsWith(']')) {
-      content = content.replace(/,\s*$/, '');
-      content += ']';
-    }
-
-    const translations = JSON.parse(content);
+    const translations = safeParseArray(rawText);
     console.log('✅ Translated dish names:', translations);
+
     return translations;
   } catch (err) {
     console.error('❌ Translation failed:', err);
     return [];
+  }
+}
+
+function safeParseArray(text) {
+  try {
+    // Clean and trim
+    let cleaned = text.trim()
+      .replace(/```json|```/g, '') // remove markdown
+      .replace(/\n/g, '')
+      .replace(/\\"/g, "'")
+      .replace(/""/g, '"')
+      .replace(/"([^"]*)"\s*"/g, '"$1 ');
+
+    // Try to auto-close broken arrays
+    if (!cleaned.startsWith('[')) throw new Error('Not a JSON array');
+    if (!cleaned.endsWith(']')) {
+      cleaned = cleaned.replace(/,\s*$/, '') + ']';
+    }
+
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error('❌ Translation parsing failed:', e.message);
+    return []; // return fallback empty
   }
 }
