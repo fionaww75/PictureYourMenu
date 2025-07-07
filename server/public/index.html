@@ -442,7 +442,10 @@ for (const [dish, imageData] of fullData) {
   } else if (imageData && typeof imageData === 'object') {
     imageUrls = imageData.images || [];
     errorMsg = imageData.error || '';
-  }
+  } else {
+  // Unexpected structure (e.g. string)
+  console.warn('[⚠️ Unexpected imageData format]', imageData);
+}
 
   const imagePromises = imageUrls.map(url => createImageElement(url, dish));
   const images = await Promise.all(imagePromises);
@@ -485,7 +488,7 @@ for (const [dish, imageData] of fullData) {
   const dishName = document.createElement('p');
   dishName.innerHTML = `
   <strong>${dish}</strong>
-  ${translated ? `<br><span style="color: #888;">${translated}</span>` : ''}
+  ${translated ? `<br><span style="color: #888;font-size: 1rem;">${translated}</span>` : ''}
 `;
   div.appendChild(imageScroll);
   div.appendChild(dishName);
