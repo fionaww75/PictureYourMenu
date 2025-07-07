@@ -288,23 +288,21 @@ ${JSON.stringify(dishList)}
 
 function safeParseArray(text) {
   try {
-    // Clean and trim
     let cleaned = text.trim()
-      .replace(/```json|```/g, '') // remove markdown
-      .replace(/\n/g, '')
-      .replace(/\\"/g, "'")
-      .replace(/""/g, '"')
-      .replace(/"([^"]*)"\s*"/g, '"$1 ');
+      .replace(/```json|```/g, '')
+      .replace(/\n/g, '');
 
-    // Try to auto-close broken arrays
-    if (!cleaned.startsWith('[')) throw new Error('Not a JSON array');
-    if (!cleaned.endsWith(']')) {
-      cleaned = cleaned.replace(/,\s*$/, '') + ']';
+    // First parse
+    const maybeArray = JSON.parse(cleaned);
+
+    // If it's a string that starts with [, it's a stringified array
+    if (typeof maybeArray === 'string' && maybeArray.trim().startsWith('[')) {
+      return JSON.parse(maybeArray);
     }
 
-    return JSON.parse(cleaned);
+    return maybeArray;
   } catch (e) {
     console.error('❌ Translation parsing failed:', e.message);
-    return []; // return fallback empty
+    return [];
   }
 }
