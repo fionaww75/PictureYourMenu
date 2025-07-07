@@ -219,3 +219,80 @@ Example:
     };
   }
 }
+
+export async function translateDishNames(dishList) {
+  console.log('🌐 Translating dish names to Chinese...');
+  if (!Array.isArray(dishList) || dishList.length === 0) {
+    return [];
+  }
+
+  const auth = new GoogleAuth({
+    keyFile,
+    scopes: 'https://www.googleapis.com/auth/cloud-platform',
+  });
+
+  const client = await auth.getClient();
+  const accessToken = await client.getAccessToken();
+
+  const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:generateContent`;
+
+  const prompt = `
+You are a helpful assistant tasked with translating dish names from French or English into **Chinese**, the way they would appear on a bilingual restaurant menu.
+
+- Only return the translated names, not the originals.
+- Keep the translations natural and culturally appropriate.
+- Format your answer as a JSON array of strings.
+
+Example input: ["Entrecôte", "Tiramisu", "Côtes de Provence Rosé"]
+Expected output: ["肋眼牛排", "提拉米苏", "普罗旺斯桃红葡萄酒"]
+
+Translate this list:
+${JSON.stringify(dishList)}
+`;
+
+  const payload = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 512,
+    }
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const rawText = await res.text();
+    console.log('📩 Gemini translation response:\n', rawText);
+
+    const parsed = JSON.parse(rawText);
+    let content = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    // Cleanup
+    content = content.replace(/```json|```/g, '').trim();
+
+    // Auto-close JSON array
+    if (!content.endsWith(']')) {
+      content = content.replace(/,\s*$/, '');
+      content += ']';
+    }
+
+    const translations = JSON.parse(content);
+    console.log('✅ Translated dish names:', translations);
+    return translations;
+  } catch (err) {
+    console.error('❌ Translation failed:', err);
+    return [];
+  }
+}

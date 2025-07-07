@@ -3,6 +3,7 @@ import multer from 'multer';
 import { extractDishesFromImage } from '../func.js';
 import { searchGoogleImages } from '../func.js';
 import fs from 'fs';
+import { translateDishNames } from '../func.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
@@ -24,6 +25,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       geminiError = extractionResult.error || null;
     }
 
+    const translations = await translateDishNames(dishNames);
     const results = {};
 
     if (geminiError) {
@@ -36,13 +38,19 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       try {
         const images = await searchGoogleImages(dish);
 
+        const translation = translations[i] || '';
+
         if (images.length === 0) {
           results[dish] = {
+            translation,
             images: [],
             error: 'No suitable image found.'
           };
         } else {
-          results[dish] = images; // frontend handles array or object
+          results[dish] = {
+            translation,
+            images
+          };
         }
       } catch (imageErr) {
         console.error(`[Image Search Error for "${dish}"]`, imageErr.message);
@@ -74,3 +82,4 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
 });
 
 export default router;
+
