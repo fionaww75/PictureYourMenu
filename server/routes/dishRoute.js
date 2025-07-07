@@ -69,7 +69,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
         }
       });
     }
-
+    console.log('[✔️ Final response to frontend]', results);
     res.json(results);
   } catch (err) {
     console.error('[Backend Error]', err.stack || err.message || err);
