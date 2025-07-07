@@ -127,7 +127,7 @@ Example:
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 512,
     },
   };
 
@@ -139,9 +139,13 @@ Example:
     },
     body: JSON.stringify(payload),
   });
-
   console.log('📩 Got response from Gemini API.');
+
   const rawText = await res.text();
+  if (!rawText || rawText.trim() === '') {
+    console.warn('⚠️ Gemini returned an empty translation response.');
+    return [];
+  }
   
   if (!res.ok) {
     console.error(`❌ Gemini error: ${res.status} - ${rawText}`);
@@ -260,7 +264,7 @@ ${JSON.stringify(dishList)}
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 4096,
     }
   };
 
@@ -275,8 +279,14 @@ ${JSON.stringify(dishList)}
     });
 
     const json = await res.json();
+    console.log('📩 Gemini API response JSON:', json);
+
     const responseText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+    if (!responseText || responseText.trim() === '') {
+      console.warn('⚠️ Gemini returned an empty translation response.');
+      return [];
+    }
     console.log('📩 Gemini raw translation text:', responseText);
 
     const translations = safeParseArray(responseText);
@@ -291,19 +301,20 @@ ${JSON.stringify(dishList)}
 
 function safeParseArray(text) {
   try {
-    const cleaned = text
-      .trim()
+    let cleaned = text.trim()
       .replace(/```json|```/g, '')
-      .replace(/\n/g, '')
-      .replace(/,\s*\]/g, ']'); // Fix trailing commas
+      .replace(/\n/g, '');
 
-    const firstParse = JSON.parse(cleaned);
+    if (!cleaned.startsWith('[')) return [];
 
-    if (typeof firstParse === 'string' && firstParse.trim().startsWith('[')) {
-      return JSON.parse(firstParse);
+    // Auto-close broken strings and arrays
+    if (!cleaned.endsWith(']')) {
+      cleaned = cleaned.replace(/,\s*"?[^",\]]*"?$/, ''); // remove trailing broken string
+      cleaned += ']';
     }
 
-    return firstParse;
+    const parsed = JSON.parse(cleaned);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     console.error('❌ Translation parsing failed:', e.message);
     return [];
