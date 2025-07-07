@@ -480,8 +480,13 @@ for (const [dish, imageData] of fullData) {
     }
   }
 
+  const translated = imageData.translation || ''; // Extract translation
+
   const dishName = document.createElement('p');
-  dishName.innerHTML = `<strong>${dish}</strong>`;
+  dishName.innerHTML = `
+  <strong>${dish}</strong>
+  ${translated ? `<br><span style="color: #888;">${translated}</span>` : ''}
+`;
   div.appendChild(imageScroll);
   div.appendChild(dishName);
   menuDiv.appendChild(div);
@@ -505,6 +510,7 @@ for (const [dish, imageData] of fullData) {
   }
 
 }
+    
     async function processDemoImage() {
       const sampleUrl = '/demo_menu.jpeg'; // or full URL if not served locally
 
@@ -531,7 +537,7 @@ for (const [dish, imageData] of fullData) {
 
   </p>
   <p style="margin-top: 0.5rem;">
-    © 2025 Picture Your Menu · Built by Wenjing Fang · Enjoy Your Meal
+    © 2025 Picture Your Menu · Built by Wenjing F. · Enjoy Your Meal
   </p>
 </footer>
 </body>
