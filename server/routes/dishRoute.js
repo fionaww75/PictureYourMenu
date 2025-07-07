@@ -36,25 +36,26 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       console.log('[Backend] Searching for image of number', i, '–', dish);
 
       try {
-        const images = await searchGoogleImages(dish);
-
+        const imageResult = await searchGoogleImages(dish); // could be array OR object
         const translation = translations[i] || '';
-
-        if (images.length === 0) {
-          results[dish] = {
-            translation,
-            images: [],
-            error: 'No suitable image found.'
-          };
-        } else {
-          results[dish] = {
-            translation,
-            images
-          };
+      
+        // Normalize the image list
+        const imageArray = Array.isArray(imageResult)
+          ? imageResult
+          : imageResult?.images || [];
+      
+        results[dish] = {
+          translation,
+          images: imageArray
+        };
+      
+        if (imageArray.length === 0) {
+          results[dish].error = 'No suitable image found.';
         }
       } catch (imageErr) {
         console.error(`[Image Search Error for "${dish}"]`, imageErr.message);
         results[dish] = {
+          translation: translations[i] || '',
           images: [],
           error: 'Image search failed. Possibly due to API limits.'
         };
