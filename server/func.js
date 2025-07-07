@@ -237,11 +237,12 @@ export async function translateDishNames(dishList) {
   const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:generateContent`;
 
   const prompt = `
-You are a helpful assistant tasked with translating dish names from their original language into **Chinese**, the way they would appear on a bilingual restaurant menu.
+You are a helpful assistant tasked with translating dish names from their original language into **Chinese**, as they would appear on a bilingual restaurant menu.
 
+Instructions:
 - Only return the translated names, not the originals.
-- Keep the translations natural and culturally appropriate.
-- Format your answer as a JSON array of strings.
+- Do not include explanations or markdown.
+- Format your answer as a valid JSON array of strings.
 
 Example input: ["Entrecôte", "Tiramisu", "Côtes de Provence Rosé"]
 Expected output: ["肋眼牛排", "提拉米苏", "普罗旺斯桃红葡萄酒"]
@@ -259,7 +260,7 @@ ${JSON.stringify(dishList)}
     ],
     generationConfig: {
       temperature: 0.3,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 1024,
     }
   };
 
@@ -273,34 +274,36 @@ ${JSON.stringify(dishList)}
       body: JSON.stringify(payload),
     });
 
-    const rawText = await res.text();
-    console.log('📩 Gemini translation response:\n', rawText);
+    const json = await res.json();
+    const responseText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    const translations = safeParseArray(rawText);
+    console.log('📩 Gemini raw translation text:', responseText);
+
+    const translations = safeParseArray(responseText);
     console.log('✅ Translated dish names:', translations);
 
     return translations;
   } catch (err) {
-    console.error('❌ Translation failed:', err);
+    console.error('❌ Translation failed:', err.message);
     return [];
   }
 }
 
 function safeParseArray(text) {
   try {
-    let cleaned = text.trim()
+    const cleaned = text
+      .trim()
       .replace(/```json|```/g, '')
-      .replace(/\n/g, '');
+      .replace(/\n/g, '')
+      .replace(/,\s*\]/g, ']'); // Fix trailing commas
 
-    // First parse
-    const maybeArray = JSON.parse(cleaned);
+    const firstParse = JSON.parse(cleaned);
 
-    // If it's a string that starts with [, it's a stringified array
-    if (typeof maybeArray === 'string' && maybeArray.trim().startsWith('[')) {
-      return JSON.parse(maybeArray);
+    if (typeof firstParse === 'string' && firstParse.trim().startsWith('[')) {
+      return JSON.parse(firstParse);
     }
 
-    return maybeArray;
+    return firstParse;
   } catch (e) {
     console.error('❌ Translation parsing failed:', e.message);
     return [];
