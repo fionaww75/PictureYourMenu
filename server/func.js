@@ -127,7 +127,7 @@ Example:
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 512,
+      maxOutputTokens: 2048,
     },
   };
 
@@ -142,11 +142,8 @@ Example:
   console.log('📩 Got response from Gemini API.');
 
   const rawText = await res.text();
-  if (!rawText || rawText.trim() === '') {
-    console.warn('⚠️ Gemini returned an empty translation response.');
-    return [];
-  }
-  
+  console.log('📩 Gemini raw text output:\n', rawText);
+
   if (!res.ok) {
     console.error(`❌ Gemini error: ${res.status} - ${rawText}`);
 
