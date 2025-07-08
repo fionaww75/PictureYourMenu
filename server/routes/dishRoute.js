@@ -25,8 +25,8 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       geminiError = extractionResult.error || null;
     }
 
-    const translations = await translateDishNames(dishNames);
-    const results = {};
+    // const translations = await translateDishNames(dishNames);
+    // const results = {};
 
     if (geminiError) {
       console.warn('[Gemini Error]', geminiError);
@@ -37,7 +37,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
 
       try {
         const imageResult = await searchGoogleImages(dish); // could be array OR object
-        const translation = translations[i] || '';
+        // const translation = translations[i] || '';
       
         // Normalize the image list
         const imageArray = Array.isArray(imageResult)
@@ -45,7 +45,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
           : imageResult?.images || [];
       
         results[dish] = {
-          translation,
+          // translation,
           images: imageArray
         };
       
@@ -55,7 +55,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       } catch (imageErr) {
         console.error(`[Image Search Error for "${dish}"]`, imageErr.message);
         results[dish] = {
-          translation: translations[i] || '',
+          // translation: translations[i] || '',
           images: [],
           error: 'Image search failed. Possibly due to API limits.'
         };

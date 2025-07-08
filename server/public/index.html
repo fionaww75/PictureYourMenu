@@ -371,137 +371,128 @@
     }
 
     async function processImage() {
-      document.getElementById('doneIndicator').style.display = 'none';
-      const fileInput = document.getElementById('imageInput');
-      const processButton = document.getElementById('processButton');
-      const loadingDiv = document.getElementById('loading');
-      const progressBar = document.getElementById('progressBar');
-      const menuDiv = document.getElementById('menuResults');
-      const statusText = document.getElementById('statusText');
-      
+  document.getElementById('doneIndicator').style.display = 'none';
+  const fileInput = document.getElementById('imageInput');
+  const processButton = document.getElementById('processButton');
+  const loadingDiv = document.getElementById('loading');
+  const menuDiv = document.getElementById('menuResults');
+  const statusText = document.getElementById('statusText');
 
-      console.log('[1] Start image processing');
-      if (!fileInput.files.length) {
-        alert('Please select an image!');
-        return;
-      }
-
-      processButton.disabled = true;
-      loadingDiv.style.display = 'block';
-      menuDiv.innerHTML = '';
-      let secondsPass = 0;
-      setProgress(10); // ✅ after fetch starts returning
-
-    const countdown = setInterval(() => {
-      secondsPass++;
-      if (secondsPass > 13) {
-        statusText.textContent = 'Almost done...';
-        clearInterval(countdown);
-      } else {
-        statusText.textContent = `Fetching dish results, normally people wait for 13 seconds... (has been ${secondsPass}s)`;
-        setProgress(10 + Math.floor((secondsPass / 13) * 80));
-      }
-    }, 1000);
-
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]);
-
-    try {
-      const res = await fetch('https://pictureyourmenu-backend.onrender.com/api/dishes', {
-        method: 'POST',
-        body: formData
-      });
-
-      setProgress(90); // ✅ after fetch starts returning
-
-      if (!res.ok) {
-        throw new Error(`Server error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      const fullData = Object.entries(data);
-      console.log('[3] Received dish results:', fullData);
-
-      let totalDishes = fullData.length;
-      let dishIndex = 0;
-
-      let firstImageShown = false;
-
-for (const [dish, imageData] of fullData) {
-  const div = document.createElement('div');
-  div.className = 'menu-item';
-
-  const imageScroll = document.createElement('div');
-  imageScroll.className = 'image-scroll';
-
-  let imageUrls = [];
-  let errorMsg = '';
-
-  if (Array.isArray(imageData)) {
-    imageUrls = imageData;
-  } else if (imageData && typeof imageData === 'object') {
-    imageUrls = imageData.images || [];
-    errorMsg = imageData.error || '';
-  } else {
-  // Unexpected structure (e.g. string)
-  console.warn('[⚠️ Unexpected imageData format]', imageData);
-}
-
-  const imagePromises = imageUrls.map(url => createImageElement(url, dish));
-  const images = await Promise.all(imagePromises);
-
-  images.forEach(img => {
-    if (img) {
-      if (!firstImageShown) {
-        // 🎯 Hide loading UI on first image
-        clearInterval(countdown);
-        statusText.textContent = '';
-        setProgress(100);
-        setTimeout(() => {
-          loadingDiv.style.display = 'none';
-          setProgress(0);
-        }, 300); // optional tiny delay for 100% flash
-        firstImageShown = true;
-      }
-      imageScroll.appendChild(img);
-    }
-  });
-
-  if (!images.some(img => img)) {
-    if (errorMsg) {
-      const errorText = document.createElement('p');
-      errorText.textContent = errorMsg;
-      errorText.style.color = '#aa0000';
-      errorText.style.fontSize = '0.85rem';
-      errorText.style.margin = '0.5rem';
-      imageScroll.appendChild(errorText);
-    } else {
-      const placeholder = document.createElement('img');
-      placeholder.src = 'placeholder.jpg';
-      placeholder.alt = `No image for ${dish}`;
-      imageScroll.appendChild(placeholder);
-    }
+  if (!fileInput.files.length) {
+    alert('Please select an image!');
+    return;
   }
 
-  const translated = imageData.translation || ''; // Extract translation
+  processButton.disabled = true;
+  loadingDiv.style.display = 'block';
+  menuDiv.innerHTML = '';
 
-  const dishName = document.createElement('p');
-  dishName.innerHTML = `
-  <strong>${dish}</strong>
-  ${translated ? `<br><span style="color: #888;font-size: 0.8rem;">${translated}</span>` : ''}
-`;
-  div.appendChild(imageScroll);
-  div.appendChild(dishName);
-  menuDiv.appendChild(div);
-}
+  let secondsPass = 0;
+  setProgress(10);
+  const countdown = setInterval(() => {
+    secondsPass++;
+    if (secondsPass > 15) {
+      statusText.textContent = 'Almost done...';
+      clearInterval(countdown);
+    } else {
+      statusText.textContent = `Fetching dish results... (${secondsPass}s)`;
+      setProgress(10 + Math.floor((secondsPass / 15) * 80));
+    }
+  }, 1000);
 
-        // 🔄 Progress update
-        // dishIndex++;
-        // const progress = 40 + Math.floor((dishIndex / totalDishes) * 50);
-        // setProgress(progress);
-      
-    
-    // setProgress(100); // done!
+  const formData = new FormData();
+  formData.append('image', fileInput.files[0]);
+
+  try {
+    const res = await fetch('https://pictureyourmenu-backend.onrender.com/api/dishes', {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    const fullData = Object.entries(data);
+
+    const dishNames = [];
+
+    let firstImageShown = false;
+
+    for (const [dish, imageData] of fullData) {
+      dishNames.push(dish);
+
+      const div = document.createElement('div');
+      div.className = 'menu-item';
+
+      const imageScroll = document.createElement('div');
+      imageScroll.className = 'image-scroll';
+
+      let imageUrls = [];
+      let errorMsg = '';
+
+      if (Array.isArray(imageData)) {
+        imageUrls = imageData;
+      } else if (typeof imageData === 'object') {
+        imageUrls = imageData.images || [];
+        errorMsg = imageData.error || '';
+      }
+
+      const imagePromises = imageUrls.map(url => createImageElement(url, dish));
+      const images = await Promise.all(imagePromises);
+
+      images.forEach(img => {
+        if (img) {
+          if (!firstImageShown) {
+            clearInterval(countdown);
+            statusText.textContent = '';
+            setProgress(100);
+            setTimeout(() => {
+              loadingDiv.style.display = 'none';
+              setProgress(0);
+            }, 300);
+            firstImageShown = true;
+          }
+          imageScroll.appendChild(img);
+        }
+      });
+
+      if (!images.some(img => img)) {
+        const errorText = document.createElement('p');
+        errorText.textContent = errorMsg || 'No image available.';
+        errorText.style.color = '#aa0000';
+        errorText.style.fontSize = '0.85rem';
+        errorText.style.margin = '0.5rem';
+        imageScroll.appendChild(errorText);
+      }
+
+      const dishName = document.createElement('p');
+      dishName.innerHTML = `<strong>${dish}</strong>`;
+      dishName.setAttribute('data-dish', dish); // for later update
+
+      div.appendChild(imageScroll);
+      div.appendChild(dishName);
+      menuDiv.appendChild(div);
+    }
+
+    // 🈯️ Translate dish names separately
+    fetch('https://pictureyourmenu-backend.onrender.com/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dishes: dishNames })
+    })
+    .then(res => res.json())
+    .then(translations => {
+      const pElements = menuDiv.querySelectorAll('p[data-dish]');
+      pElements.forEach((p, i) => {
+        const translated = translations[i];
+        if (translated) {
+          p.innerHTML += `<br><span style="color: #888; font-size: 0.8rem;">${translated}</span>`;
+        }
+      });
+    })
+    .catch(err => {
+      console.error('❌ Translation fetch failed', err);
+    });
+
   } catch (err) {
     console.error('[X] Error during fetch:', err);
     alert('Failed to process image.');
@@ -509,11 +500,9 @@ for (const [dish, imageData] of fullData) {
     processButton.disabled = false;
     loadingDiv.style.display = 'none';
     document.getElementById('doneIndicator').style.display = 'block';
-    console.log('[4] Image processing complete');
   }
-
 }
-    
+
     async function processDemoImage() {
       const sampleUrl = '/demo_menu.jpeg'; // or full URL if not served locally
 
