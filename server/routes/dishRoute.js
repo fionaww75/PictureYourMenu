@@ -31,6 +31,7 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
     if (geminiError) {
       console.warn('[Gemini Error]', geminiError);
     }
+    const results = {};
 
     for (const [i, dish] of dishNames.entries()) {
       console.log('[Backend] Searching for image of number', i, '–', dish);
