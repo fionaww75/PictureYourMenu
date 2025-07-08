@@ -31,36 +31,44 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
     if (geminiError) {
       console.warn('[Gemini Error]', geminiError);
     }
-    const results = {};
+    // const results = {};
 
-    for (const [i, dish] of dishNames.entries()) {
-      console.log('[Backend] Searching for image of number', i, '–', dish);
-
+    const imagePromises = dishNames.map(async (dish, i) => {
       try {
-        const imageResult = await searchGoogleImages(dish); // could be array OR object
-        // const translation = translations[i] || '';
-      
-        // Normalize the image list
+        console.log('[Backend] Searching for image of number', i, '–', dish);
+        const imageResult = await searchGoogleImages(dish);
+    
         const imageArray = Array.isArray(imageResult)
           ? imageResult
           : imageResult?.images || [];
-      
-        results[dish] = {
-          // translation,
+    
+        const result = {
           images: imageArray
         };
-      
+    
         if (imageArray.length === 0) {
-          results[dish].error = 'No suitable image found.';
+          result.error = 'No suitable image found.';
         }
-      } catch (imageErr) {
-        console.error(`[Image Search Error for "${dish}"]`, imageErr.message);
-        results[dish] = {
-          // translation: translations[i] || '',
-          images: [],
-          error: 'Image search failed. Possibly due to API limits.'
+    
+        return { dish, result };
+      } catch (err) {
+        console.error(`[Image Search Error for "${dish}"]`, err.message);
+        return {
+          dish,
+          result: {
+            images: [],
+            error: 'Image search failed. Possibly due to API limits.'
+          }
         };
       }
+    });
+    
+    const resolvedImages = await Promise.all(imagePromises);
+    
+    // Merge into `results` object
+    const results = {};
+    for (const { dish, result } of resolvedImages) {
+      results[dish] = result;
     }
 
     if (geminiError && dishNames.length === 0) {
