@@ -13,7 +13,9 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
   const imagePath = req.file.path;
 
   try {
+    console.log('[Backend] Extracting dishes from image');
     const extractionResult = await extractDishesFromImage(imagePath);
+    
     let dishNames = [];
     let geminiError = null;
 
@@ -25,13 +27,9 @@ router.post('/dishes', upload.single('image'), async (req, res) => {
       geminiError = extractionResult.error || null;
     }
 
-    // const translations = await translateDishNames(dishNames);
-    // const results = {};
-
     if (geminiError) {
       console.warn('[Gemini Error]', geminiError);
     }
-    // const results = {};
 
     const imagePromises = dishNames.map(async (dish, i) => {
       try {

@@ -65,7 +65,7 @@ export async function searchGoogleImages(dish) {
     }
 
     if (selectedImages.length) {
-      console.log(`✅ Selected images for "${dish}":`, selectedImages);
+      console.log(`✅ Selected ${selectedImages.length} images for "${dish}"`);
     } else {
       console.error(`❌ No image found for "${dish}".`);
     }
@@ -92,8 +92,6 @@ export async function extractDishesFromImage(imagePath) {
   const accessToken = await client.getAccessToken();
 
   const imageBase64 = fs.readFileSync(imagePath).toString('base64');
-  console.log('GCP project:', projectId);
-  console.log('Location:', location);
 
   const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.5-flash:generateContent`;
 
@@ -142,7 +140,6 @@ Example:
   console.log('📩 Got response from Gemini API.');
 
   const rawText = await res.text();
-  console.log('📩 Gemini raw text output:\n', rawText);
 
   if (!res.ok) {
     console.error(`❌ Gemini error: ${res.status} - ${rawText}`);
@@ -178,7 +175,6 @@ Example:
   }
 
   let content = rawResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  console.log('📦 Gemini raw text output:\n', content);
 
   // Clean the response
   content = content
@@ -276,7 +272,6 @@ ${JSON.stringify(dishList)}
     });
 
     const json = await res.json();
-    console.log('📩 Gemini API response JSON:', json);
 
     const responseText = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -284,7 +279,6 @@ ${JSON.stringify(dishList)}
       console.warn('⚠️ Gemini returned an empty translation response.');
       return [];
     }
-    console.log('📩 Gemini raw translation text:', responseText);
 
     const translations = safeParseArray(responseText);
     console.log('✅ Translated dish names:', translations);
