@@ -1,3 +1,7 @@
+import express from 'express';
+import { translateDishNames } from '../func.js';
+
+const router = express.Router();
 router.post('/translate', async (req, res) => {
     const { dishes } = req.body;
   
@@ -13,3 +17,5 @@ router.post('/translate', async (req, res) => {
       res.status(500).json({ error: 'Translation failed' });
     }
   });
+
+  export default router;
