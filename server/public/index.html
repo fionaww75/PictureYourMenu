@@ -602,13 +602,15 @@ async function openCameraOverlay() {
   await new Promise(resolve => {
     video.onloadedmetadata = () => {
       video.play();
-      console.log('Video loaded');
+      
       resolve();
     };
   });
+  console.log('Camera overlay opened');
 } catch (err) {
   alert('Camera access failed: ' + err.message);
   closeCameraOverlay();
+}
 }
 
 function closeCameraOverlay() {
