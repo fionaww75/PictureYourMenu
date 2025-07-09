@@ -42,6 +42,37 @@
   <meta name="theme-color" content="#ff9100">
 
   <style>
+    #cameraOverlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: black;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#cameraPreview {
+  width: 100%;
+  max-height: 80vh;
+  object-fit: cover;
+}
+
+#captureBtn, #flipCameraBtn, #closeCameraBtn {
+  margin: 10px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #eee;
+  color: #333;
+  cursor: pointer;
+}
+
+#captureBtn { background-color: #ffcc00; }
+#closeCameraBtn { background-color: #ccc; }
     * {
         margin: 0;
         padding: 0;
@@ -325,8 +356,8 @@
         
         <!-- 📷 Camera Button -->
         <div class="camera-wrapper">
-          <button onclick="openCamera()" id="cameraButton" style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; min-width: auto;">
-            <i class="fas fa-camera" style="margin-right: 6px;"></i>
+          <button onclick="openCameraOverlay()" id="cameraButton">
+            <i class="fas fa-camera"></i> Take Photo
           </button>
           <video id="cameraPreview" autoplay playsinline style="display:none; width:100%; max-width:400px; margin-top: 0.5rem; border-radius: 8px;"></video>
           <canvas id="photoCanvas" style="display:none;"></canvas>
@@ -545,65 +576,66 @@
       fileInput.dispatchEvent(new Event('change'));
     }
     
-    let stream;
 
-async function openCamera() {
+    let stream = null;
+let useBackCamera = true;
+
+async function openCameraOverlay() {
+  const overlay = document.getElementById('cameraOverlay');
   const video = document.getElementById('cameraPreview');
-  const canvas = document.getElementById('photoCanvas');
+
+  overlay.style.display = 'flex';
 
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
-    video.style.display = 'block';
-    await new Promise(resolve => video.onloadedmetadata = () => {
-      video.play(); // start the video
-      resolve();
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: useBackCamera ? 'environment' : 'user' }
     });
 
-    const take = confirm('Position the menu and press OK to capture.');
-
-    
-
-    if (take) {
-      // Pause the video to capture a still
-      
-      video.pause();
-
-      // Draw the current frame onto the canvas
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-
-      // Convert canvas to blob and simulate file input
-      canvas.toBlob(blob => {
-        const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
-
-        // Simulate upload
-        const fileInput = document.getElementById('imageInput');
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        fileInput.files = dataTransfer.files;
-
-        document.getElementById('fileName').textContent = file.name;
-
-        // Stop camera stream
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-        video.style.display = 'none';
-
-        // Trigger processing
-        processImage();
-      }, 'image/jpeg');
-    } else {
-      // User canceled
-      video.style.display = 'none';
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    }
+    video.srcObject = stream;
   } catch (err) {
     alert('Camera access failed: ' + err.message);
+    closeCameraOverlay();
   }
 }
+
+function closeCameraOverlay() {
+  document.getElementById('cameraOverlay').style.display = 'none';
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+}
+
+document.getElementById('closeCameraBtn').onclick = closeCameraOverlay;
+
+document.getElementById('flipCameraBtn').onclick = () => {
+  useBackCamera = !useBackCamera;
+  closeCameraOverlay();
+  setTimeout(openCameraOverlay, 200); // Restart camera
+};
+
+document.getElementById('captureBtn').onclick = () => {
+  const video = document.getElementById('cameraPreview');
+  const canvas = document.getElementById('photoCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(blob => {
+    const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
+    const fileInput = document.getElementById('imageInput');
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+
+    document.getElementById('fileName').textContent = file.name;
+
+    closeCameraOverlay();
+    processImage();
+  }, 'image/jpeg');
+};
 function takePhoto() {
   const canvas = document.getElementById('photoCanvas');
   const video = document.getElementById('cameraPreview');
@@ -647,5 +679,13 @@ function takePhoto() {
     © 2025 Picture Your Menu · Built by Wenjing F. · Enjoy Your Meal
   </p>
 </footer>
+<!-- Camera Overlay -->
+<div id="cameraOverlay" style="display: none;">
+  <video id="cameraPreview" autoplay playsinline></video>
+  <button id="captureBtn">📸 Capture</button>
+  <button id="flipCameraBtn">🔄 Flip</button>
+  <button id="closeCameraBtn">✖ Cancel</button>
+</div>
+<canvas id="photoCanvas" style="display:none;"></canvas>
 </body>
 </html>
