@@ -602,6 +602,7 @@ async function openCameraOverlay() {
   await new Promise(resolve => {
     video.onloadedmetadata = () => {
       video.play();
+      console.log('Video loaded');
       resolve();
     };
   });
