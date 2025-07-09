@@ -356,10 +356,11 @@
         
         <!-- 📷 Camera Button -->
         <div class="camera-wrapper">
-          <button onclick="openCameraOverlay()" id="cameraButton" style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; min-width: auto;"></button>>
+          <button onclick="openCameraOverlay()" id="cameraButton" style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; min-width: auto;"></button>
           <i class="fas fa-camera" style="margin-right: 6px;"></i>
           </button>
-          <video id="cameraPreview" autoplay playsinline style="display:none; width:100%; max-width:400px; margin-top: 0.5rem; border-radius: 8px;"></video>
+
+          <video id="cameraPreview" autoplay playsinline style="width: 100%; height: auto;"></video>
           <canvas id="photoCanvas" style="display:none;"></canvas>
           <button onclick="capturePhoto()" id="captureButton" style="display:none; margin-top: 0.5rem;">✅ Use This Photo</button>
         </div>
@@ -577,7 +578,7 @@
     }
     
 
-    let stream = null;
+let stream = null;
 let useBackCamera = true;
 
 async function openCameraOverlay() {
@@ -592,6 +593,12 @@ async function openCameraOverlay() {
     });
 
     video.srcObject = stream;
+    await new Promise(resolve => {
+  video.onloadedmetadata = () => {
+    video.play();
+    resolve();
+  };
+});
     await video.play();
   } catch (err) {
     alert('Camera access failed: ' + err.message);
@@ -618,6 +625,7 @@ document.getElementById('flipCameraBtn').onclick = () => {
 document.getElementById('captureBtn').onclick = () => {
   const video = document.getElementById('cameraPreview');
   const canvas = document.getElementById('photoCanvas');
+  console.log('Video dimensions:', video.videoWidth, video.videoHeight);
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
@@ -637,36 +645,6 @@ document.getElementById('captureBtn').onclick = () => {
     processImage();
   }, 'image/jpeg');
 };
-function takePhoto() {
-  const canvas = document.getElementById('photoCanvas');
-  const video = document.getElementById('cameraPreview');
-  const context = canvas.getContext('2d');
-  
-  // Set canvas size = video size
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  
-  // Draw the photo
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
-  // Convert canvas to Blob
-  canvas.toBlob(blob => {
-    // Create a File object (simulate file upload)
-    const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
-
-    // Create a DataTransfer to insert the file into the file input
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    
-    const fileInput = document.getElementById('imageInput');
-    fileInput.files = dataTransfer.files;
-
-    // Optional: update UI to show the file name
-    document.getElementById('fileName').textContent = file.name;
-
-    console.log('📷 Photo captured and inserted into file input!');
-  }, 'image/jpeg');
-}
 </script>
 <footer style="text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #888;">
   <p>
