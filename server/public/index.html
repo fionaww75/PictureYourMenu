@@ -593,22 +593,21 @@ async function openCameraOverlay() {
   overlay.style.display = 'flex';
 
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: useBackCamera ? 'environment' : 'user' }
-    });
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: useBackCamera ? 'environment' : 'user' }
+  });
 
-    video.srcObject = stream;
-    await new Promise(resolve => {
-  video.onloadedmetadata = () => {
-    video.play();
-    resolve();
-  };
-});
-    await video.play();
-  } catch (err) {
-    alert('Camera access failed: ' + err.message);
-    closeCameraOverlay();
-  }
+  video.srcObject = stream;
+
+  await new Promise(resolve => {
+    video.onloadedmetadata = () => {
+      video.play();
+      resolve();
+    };
+  });
+} catch (err) {
+  alert('Camera access failed: ' + err.message);
+  closeCameraOverlay();
 }
 
 function closeCameraOverlay() {
