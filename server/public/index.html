@@ -356,13 +356,18 @@
         
         <!-- 📷 Camera Button -->
         <div class="camera-wrapper">
-          <button onclick="openCameraOverlay()" id="cameraButton" style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; min-width: auto;"></button>
-          <i class="fas fa-camera" style="margin-right: 6px;"></i>
+          <button onclick="openCameraOverlay()" id="cameraButton"
+            style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem;">
+            <i class="fas fa-camera" style="margin-right: 6px;"></i>
+            Take Photo
           </button>
 
           <video id="cameraPreview" autoplay playsinline style="width: 100%; height: auto;"></video>
           <canvas id="photoCanvas" style="display:none;"></canvas>
-          <button onclick="capturePhoto()" id="captureButton" style="display:none; margin-top: 0.5rem;">✅ Use This Photo</button>
+
+          <button onclick="capturePhoto()" id="captureButton" style="display:none; margin-top: 0.5rem;">
+            ✅ Use This Photo
+          </button>
         </div>
     
         <!-- 📁 File Input -->
@@ -607,13 +612,21 @@ async function openCameraOverlay() {
 }
 
 function closeCameraOverlay() {
-  document.getElementById('cameraOverlay').style.display = 'none';
+  const overlay = document.getElementById('cameraOverlay');
+  const video = document.getElementById('cameraPreview');
+
+  overlay.style.display = 'none';
+
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+  }
+
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
     stream = null;
   }
 }
-
 document.getElementById('closeCameraBtn').onclick = closeCameraOverlay;
 
 document.getElementById('flipCameraBtn').onclick = () => {
