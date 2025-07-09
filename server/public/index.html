@@ -10,12 +10,9 @@
 
   <!-- 🔗 Font Awesome (Camera Icon) -->
   <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    integrity="sha512-dYdR7rNfWjSmcKZRWEPfO63kZB3YgzYrT2mbzPZfOyPRL8rK7s3zv7tIh9EhvDkDZTq8ZpKpNDiUiLJ5whQ2Hg=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  />
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+/>
 
     <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-30YTP96LGT"></script>
@@ -277,7 +274,7 @@
 
     .demo-wrapper {
       position: relative;
-      height: 100px; /* or any height you like */
+      height: 80px; /* or any height you like */
       aspect-ratio: 3 / 2; /* optional, maintains shape */
       overflow: hidden;
       border-radius: 8px;
@@ -304,6 +301,19 @@
       border-bottom-left-radius: 8px;
       border-bottom-right-radius: 8px;
     }
+
+    .top-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.camera-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
   </style>
 
 </head>
@@ -312,20 +322,33 @@
     <h2>Picture Your Menu</h2>
     <div class="upload-section">
       <div class="top-inputs">
+        
+        <!-- 📷 Camera Button -->
+        <div class="camera-wrapper">
+          <button onclick="openCamera()" id="cameraButton" style="background-color: #f0f0f0; color: #333; padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; min-width: auto;">
+            <i class="fas fa-camera" style="margin-right: 6px;"></i>
+          </button>
+          <video id="cameraPreview" autoplay playsinline style="display:none; width:100%; max-width:400px; margin-top: 0.5rem; border-radius: 8px;"></video>
+          <button onclick="capturePhoto()" id="captureButton" style="display:none; margin-top: 0.5rem;">✅ Use This Photo</button>
+        </div>
+    
+        <!-- 📁 File Input -->
         <div class="file-input-wrapper">
           <input type="file" id="imageInput" accept="image/*" />
           <label for="imageInput">
-            <i class="fas fa-camera" style="margin-right: 6px;"></i>
+            <i class="fas fa-image" style="margin-right: 6px;"></i>
             Choose My Menu <span id="fileName"></span>
           </label>
         </div>
     
+        <!-- 🧪 Sample Menu -->
         <div class="demo-wrapper" onclick="processDemoImage()">
           <img src="/demo_menu.jpeg" alt="Try sample menu" class="demo-image" />
           <div class="demo-overlay">Try it</div>
         </div>
       </div>
     
+      <!-- 🚀 Action -->
       <button onclick="processImage()" id="processButton">See Pictures</button>
     </div>
     
@@ -520,6 +543,89 @@
 
       fileInput.dispatchEvent(new Event('change'));
     }
+    
+    let stream;
+
+async function openCamera() {
+  const video = document.getElementById('cameraPreview');
+  const canvas = document.getElementById('photoCanvas');
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+    video.style.display = 'block';
+
+    const take = confirm('Position the menu and press OK to capture.');
+
+    if (take) {
+      // Pause the video to capture a still
+      video.pause();
+
+      // Draw the current frame onto the canvas
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      // Convert canvas to blob and simulate file input
+      canvas.toBlob(blob => {
+        const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
+
+        // Simulate upload
+        const fileInput = document.getElementById('imageInput');
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+
+        document.getElementById('fileName').textContent = file.name;
+
+        // Stop camera stream
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        video.style.display = 'none';
+
+        // Trigger processing
+        processImage();
+      }, 'image/jpeg');
+    } else {
+      // User canceled
+      video.style.display = 'none';
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    }
+  } catch (err) {
+    alert('Camera access failed: ' + err.message);
+  }
+}
+function takePhoto() {
+  const canvas = document.getElementById('photoCanvas');
+  const video = document.getElementById('cameraPreview');
+  const context = canvas.getContext('2d');
+  
+  // Set canvas size = video size
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  
+  // Draw the photo
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  // Convert canvas to Blob
+  canvas.toBlob(blob => {
+    // Create a File object (simulate file upload)
+    const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
+
+    // Create a DataTransfer to insert the file into the file input
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    
+    const fileInput = document.getElementById('imageInput');
+    fileInput.files = dataTransfer.files;
+
+    // Optional: update UI to show the file name
+    document.getElementById('fileName').textContent = file.name;
+
+    console.log('📷 Photo captured and inserted into file input!');
+  }, 'image/jpeg');
+}
 </script>
 <footer style="text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #888;">
   <p>
