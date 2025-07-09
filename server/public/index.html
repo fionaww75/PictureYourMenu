@@ -338,7 +338,7 @@
           <input type="file" id="imageInput" accept="image/*" />
           <label for="imageInput">
             <i class="fas fa-image" style="margin-right: 6px;"></i>
-            Choose My Menu <span id="fileName"></span>
+            Choose Menu <span id="fileName"></span>
           </label>
         </div>
     
@@ -555,11 +555,18 @@ async function openCamera() {
     stream = await navigator.mediaDevices.getUserMedia({ video: true });
     video.srcObject = stream;
     video.style.display = 'block';
+    await new Promise(resolve => video.onloadedmetadata = () => {
+      video.play(); // start the video
+      resolve();
+    });
 
     const take = confirm('Position the menu and press OK to capture.');
 
+    
+
     if (take) {
       // Pause the video to capture a still
+      
       video.pause();
 
       // Draw the current frame onto the canvas
