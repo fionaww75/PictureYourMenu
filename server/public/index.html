@@ -61,18 +61,24 @@
 }
 
 #captureBtn, #flipCameraBtn, #closeCameraBtn {
-  margin: 10px;
+  margin: 5px;
   padding: 10px 16px;
   font-size: 1rem;
   border: none;
   border-radius: 6px;
-  background-color: #eee;
-  color: #333;
+  background-color: #666;
+  color: white;
   cursor: pointer;
+  flex: 1;
 }
 
-#captureBtn { background-color: #ffcc00; }
-#closeCameraBtn { background-color: #ccc; }
+.camera-buttons {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+  margin-top: 10px;
+}
     * {
         margin: 0;
         padding: 0;
@@ -701,9 +707,11 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Camera Overlay -->
 <div id="cameraOverlay" style="display: none;">
   <video id="cameraPreview" autoplay playsinline></video>
-  <button id="captureBtn">📸 Capture</button>
-  <button id="flipCameraBtn">🔄 Flip</button>
-  <button id="closeCameraBtn">✖ Cancel</button>
+  <div class="camera-buttons">
+    <button id="captureBtn">Capture</button>
+    <button id="flipCameraBtn">Flip</button>
+    <button id="closeCameraBtn">Cancel</button>
+  </div>
 </div>
 <canvas id="photoCanvas" style="display:none;"></canvas>
 </body>
