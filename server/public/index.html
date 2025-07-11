@@ -54,6 +54,7 @@
   flex-direction: column;
   padding: 20px;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 #cameraPreview {
@@ -73,6 +74,8 @@
   color: white;
   cursor: pointer;
   flex: 1;
+  position: relative;
+  z-index: 10001;
 }
 
 .camera-buttons {
@@ -82,22 +85,40 @@
   justify-content: center;
   margin-top: 10px;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 10000;
 }
 
 @media (max-width: 768px) {
   .camera-buttons {
     gap: 8px;
     margin-top: 15px;
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    z-index: 10002;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 8px;
+    margin: 0 20px 20px 20px;
   }
   
   #captureBtn, #flipCameraBtn, #closeCameraBtn {
     padding: 12px 16px;
     font-size: 0.9rem;
     min-width: 80px;
+    background-color: #666 !important;
+    color: white !important;
+    border: 1px solid #888;
   }
   
   #cameraPreview {
-    height: calc(100vh - 140px);
+    height: calc(100vh - 160px);
+  }
+  
+  #cameraOverlay {
+    padding: 10px;
   }
 }
     * {
@@ -614,6 +635,9 @@ function capturePhoto() {
 async function openCameraOverlay() {
   const overlay = document.getElementById('cameraOverlay');
   const video = document.getElementById('cameraPreview');
+  const buttons = document.querySelector('.camera-buttons');
+
+  console.log('Opening camera overlay:', { overlay, video, buttons });
 
   if (!overlay || !video) {
     console.error('Camera elements not found');
@@ -621,6 +645,7 @@ async function openCameraOverlay() {
   }
 
   overlay.style.display = 'flex';
+  console.log('Camera overlay display set to flex');
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -673,8 +698,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const flipCameraBtn = document.getElementById('flipCameraBtn');
   const captureBtn = document.getElementById('captureBtn');
 
+  console.log('Camera buttons found:', { closeCameraBtn, flipCameraBtn, captureBtn });
+
   if (closeCameraBtn) {
     closeCameraBtn.onclick = closeCameraOverlay;
+    console.log('Close button event listener attached');
   }
 
   if (flipCameraBtn) {
@@ -683,6 +711,7 @@ document.addEventListener('DOMContentLoaded', function() {
       closeCameraOverlay();
       setTimeout(openCameraOverlay, 200); // Restart camera
     };
+    console.log('Flip button event listener attached');
   }
 
   if (captureBtn) {
@@ -709,6 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't automatically start processing - let user click "See Pictures" button
       }, 'image/jpeg');
     };
+    console.log('Capture button event listener attached');
   }
 });
 </script>
@@ -727,10 +757,10 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Camera Overlay -->
 <div id="cameraOverlay" style="display: none;">
   <video id="cameraPreview" autoplay playsinline></video>
-  <div class="camera-buttons">
-    <button id="captureBtn">Capture</button>
-    <button id="flipCameraBtn">Flip</button>
-    <button id="closeCameraBtn">Cancel</button>
+  <div class="camera-buttons" style="display: flex !important; visibility: visible !important;">
+    <button id="captureBtn" style="display: block !important; visibility: visible !important;">Capture</button>
+    <button id="flipCameraBtn" style="display: block !important; visibility: visible !important;">Flip</button>
+    <button id="closeCameraBtn" style="display: block !important; visibility: visible !important;">Cancel</button>
   </div>
 </div>
 <canvas id="photoCanvas" style="display:none;"></canvas>
