@@ -584,7 +584,7 @@
     
 
 let stream = null;
-let useBackCamera = true;
+let useBackCamera = false;
 
 async function openCameraOverlay() {
   const overlay = document.getElementById('cameraOverlay');
@@ -614,6 +614,7 @@ async function openCameraOverlay() {
 }
 
 function closeCameraOverlay() {
+  console.log('Closing camera overlay');
   const overlay = document.getElementById('cameraOverlay');
   const video = document.getElementById('cameraPreview');
 
