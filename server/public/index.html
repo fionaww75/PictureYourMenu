@@ -361,13 +361,6 @@
             <i class="fas fa-camera" style="margin-right: 6px;"></i>
             Take Photo
           </button>
-
-          <video id="cameraPreview" autoplay playsinline style="width: 100%; height: auto;"></video>
-          <canvas id="photoCanvas" style="display:none;"></canvas>
-
-          <button onclick="capturePhoto()" id="captureButton" style="display:none; margin-top: 0.5rem;">
-            ✅ Use This Photo
-          </button>
         </div>
     
         <!-- 📁 File Input -->
@@ -586,31 +579,47 @@
 let stream = null;
 let useBackCamera = false;
 
+function capturePhoto() {
+  // This function is called from the old button that was removed
+  // Redirect to the camera overlay instead
+  openCameraOverlay();
+}
+
 async function openCameraOverlay() {
   const overlay = document.getElementById('cameraOverlay');
   const video = document.getElementById('cameraPreview');
 
+  if (!overlay || !video) {
+    console.error('Camera elements not found');
+    return;
+  }
+
   overlay.style.display = 'flex';
 
   try {
-  stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: useBackCamera ? 'environment' : 'user' }
-  });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        facingMode: useBackCamera ? 'environment' : 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    });
 
-  video.srcObject = stream;
+    video.srcObject = stream;
 
-  await new Promise(resolve => {
-    video.onloadedmetadata = () => {
-      video.play();
-      
-      resolve();
-    };
-  });
-  console.log('Camera overlay opened');
-} catch (err) {
-  alert('Camera access failed: ' + err.message);
-  closeCameraOverlay();
-}
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = () => {
+        video.play().then(resolve).catch(reject);
+      };
+      video.onerror = reject;
+    });
+    
+    console.log('Camera overlay opened successfully');
+  } catch (err) {
+    console.error('Camera access failed:', err);
+    alert('Camera access failed: ' + err.message);
+    closeCameraOverlay();
+  }
 }
 
 function closeCameraOverlay() {
@@ -618,7 +627,9 @@ function closeCameraOverlay() {
   const overlay = document.getElementById('cameraOverlay');
   const video = document.getElementById('cameraPreview');
 
-  overlay.style.display = 'none';
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
 
   if (video) {
     video.pause();
@@ -630,37 +641,50 @@ function closeCameraOverlay() {
     stream = null;
   }
 }
-document.getElementById('closeCameraBtn').onclick = closeCameraOverlay;
+// Initialize camera event listeners when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  const closeCameraBtn = document.getElementById('closeCameraBtn');
+  const flipCameraBtn = document.getElementById('flipCameraBtn');
+  const captureBtn = document.getElementById('captureBtn');
 
-document.getElementById('flipCameraBtn').onclick = () => {
-  useBackCamera = !useBackCamera;
-  closeCameraOverlay();
-  setTimeout(openCameraOverlay, 200); // Restart camera
-};
+  if (closeCameraBtn) {
+    closeCameraBtn.onclick = closeCameraOverlay;
+  }
 
-document.getElementById('captureBtn').onclick = () => {
-  const video = document.getElementById('cameraPreview');
-  const canvas = document.getElementById('photoCanvas');
-  console.log('Video dimensions:', video.videoWidth, video.videoHeight);
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  if (flipCameraBtn) {
+    flipCameraBtn.onclick = () => {
+      useBackCamera = !useBackCamera;
+      closeCameraOverlay();
+      setTimeout(openCameraOverlay, 200); // Restart camera
+    };
+  }
 
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  if (captureBtn) {
+    captureBtn.onclick = () => {
+      const video = document.getElementById('cameraPreview');
+      const canvas = document.getElementById('photoCanvas');
+      console.log('Video dimensions:', video.videoWidth, video.videoHeight);
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-  canvas.toBlob(blob => {
-    const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
-    const fileInput = document.getElementById('imageInput');
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    document.getElementById('fileName').textContent = file.name;
+      canvas.toBlob(blob => {
+        const file = new File([blob], 'captured_menu.jpg', { type: 'image/jpeg' });
+        const fileInput = document.getElementById('imageInput');
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
 
-    closeCameraOverlay();
-    processImage();
-  }, 'image/jpeg');
-};
+        document.getElementById('fileName').textContent = file.name;
+
+        closeCameraOverlay();
+        processImage();
+      }, 'image/jpeg');
+    };
+  }
+});
 </script>
 <footer style="text-align: center; margin-top: 2rem; font-size: 0.8rem; color: #888;">
   <p>
