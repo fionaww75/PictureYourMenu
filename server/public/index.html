@@ -568,18 +568,6 @@
     const dishNames = [];
     let firstImageShown = false;
 
-    // Start translation IMMEDIATELY after getting dish names
-    const translationPromise = fetch('https://pictureyourmenu-backend.onrender.com/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dishes: dishNames })
-    })
-    .then(res => res.json())
-    .catch(err => {
-      console.error('❌ Translation fetch failed', err);
-      return [];
-    });
-
     // Process dishes and display images
     for (const [dish, imageData] of fullData) {
       dishNames.push(dish);
@@ -650,16 +638,27 @@
       }
     }
 
-    // Add translations when ready (might be before or after images finish)
-    translationPromise.then(translations => {
-      const pElements = menuDiv.querySelectorAll('p[data-dish]');
-      pElements.forEach((p, i) => {
-        const translated = translations[i];
-        if (translated) {
-          p.innerHTML += `<br><span style="color: #888; font-size: 0.8rem;">${translated}</span>`;
-        }
+    // Start translation AFTER collecting all dish names
+    if (dishNames.length > 0) {
+      fetch('https://pictureyourmenu-backend.onrender.com/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dishes: dishNames })
+      })
+      .then(res => res.json())
+      .then(translations => {
+        const pElements = menuDiv.querySelectorAll('p[data-dish]');
+        pElements.forEach((p, i) => {
+          const translated = translations[i];
+          if (translated) {
+            p.innerHTML += `<br><span style="color: #888; font-size: 0.8rem;">${translated}</span>`;
+          }
+        });
+      })
+      .catch(err => {
+        console.error('❌ Translation fetch failed', err);
       });
-    });
+    }
 
   } catch (err) {
     console.error('[X] Error during fetch:', err);
