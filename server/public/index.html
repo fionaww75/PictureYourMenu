@@ -566,10 +566,21 @@
     const fullData = Object.entries(data);
 
     const dishNames = [];
-    const results = {};
-
     let firstImageShown = false;
 
+    // Start translation IMMEDIATELY after getting dish names
+    const translationPromise = fetch('https://pictureyourmenu-backend.onrender.com/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dishes: dishNames })
+    })
+    .then(res => res.json())
+    .catch(err => {
+      console.error('❌ Translation fetch failed', err);
+      return [];
+    });
+
+    // Process dishes and display images
     for (const [dish, imageData] of fullData) {
       dishNames.push(dish);
 
@@ -589,26 +600,47 @@
         errorMsg = imageData.error || '';
       }
 
-      const imagePromises = imageUrls.map(url => createImageElement(url, dish));
-      const images = await Promise.all(imagePromises);
+      // Create dish name element immediately
+      const dishName = document.createElement('p');
+      dishName.innerHTML = `<strong>${dish}</strong>`;
+      dishName.setAttribute('data-dish', dish);
 
-      images.forEach(img => {
-        if (img) {
-          if (!firstImageShown) {
-            clearInterval(countdown);
-            statusText.textContent = '';
-            setProgress(100);
-            setTimeout(() => {
-              loadingDiv.style.display = 'none';
-              setProgress(0);
-            }, 300);
-            firstImageShown = true;
-          }
-          imageScroll.appendChild(img);
-        }
-      });
+      div.appendChild(imageScroll);
+      div.appendChild(dishName);
+      menuDiv.appendChild(div);
 
-      if (!images.some(img => img)) {
+      // Load images for this dish (don't wait for all images)
+      if (imageUrls.length > 0) {
+        imageUrls.forEach(url => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = dish;
+          img.style.width = 'clamp(180px, 99%, 300px)';
+          img.style.height = '150px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '4px';
+          img.style.flexShrink = '0';
+          img.style.scrollSnapAlign = 'start';
+          
+          img.onload = () => {
+            if (!firstImageShown) {
+              clearInterval(countdown);
+              statusText.textContent = '';
+              setProgress(100);
+              setTimeout(() => {
+                loadingDiv.style.display = 'none';
+                setProgress(0);
+              }, 300);
+              firstImageShown = true;
+            }
+            imageScroll.appendChild(img);
+          };
+          
+          img.onerror = () => {
+            console.warn(`⚠️ Ignored one image: ${url}`);
+          };
+        });
+      } else {
         const errorText = document.createElement('p');
         errorText.textContent = errorMsg || 'No image available.';
         errorText.style.color = '#aa0000';
@@ -616,24 +648,10 @@
         errorText.style.margin = '0.5rem';
         imageScroll.appendChild(errorText);
       }
-
-      const dishName = document.createElement('p');
-      dishName.innerHTML = `<strong>${dish}</strong>`;
-      dishName.setAttribute('data-dish', dish); // for later update
-
-      div.appendChild(imageScroll);
-      div.appendChild(dishName);
-      menuDiv.appendChild(div);
     }
 
-    // 🈯️ Translate dish names separately
-    fetch('https://pictureyourmenu-backend.onrender.com/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dishes: dishNames })
-    })
-    .then(res => res.json())
-    .then(translations => {
+    // Add translations when ready (might be before or after images finish)
+    translationPromise.then(translations => {
       const pElements = menuDiv.querySelectorAll('p[data-dish]');
       pElements.forEach((p, i) => {
         const translated = translations[i];
@@ -641,9 +659,6 @@
           p.innerHTML += `<br><span style="color: #888; font-size: 0.8rem;">${translated}</span>`;
         }
       });
-    })
-    .catch(err => {
-      console.error('❌ Translation fetch failed', err);
     });
 
   } catch (err) {
