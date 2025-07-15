@@ -40,6 +40,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Picture Your Menu">
   <meta name="theme-color" content="#ff9100">
+  
+  <!-- Additional SEO and Social Media -->
+  <meta name="description" content="Snap a photo of a restaurant menu and see what each dish looks like. Perfect for food lovers and travelers." />
+  <meta name="keywords" content="menu, food, restaurant, photo, dishes, food pictures" />
+  <meta name="author" content="Picture Your Menu" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
   <style>
     #cameraOverlay {
@@ -540,7 +548,20 @@
       body: formData
     });
 
-    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    if (!res.ok) {
+      let errorMessage = 'Failed to process image.';
+      
+      if (res.status === 429) {
+        errorMessage = 'Too many requests. Please wait a moment and try again.';
+      } else if (res.status === 413) {
+        errorMessage = 'Image file is too large. Please use a smaller image.';
+      } else if (res.status >= 500) {
+        errorMessage = 'Server is busy. Please try again in a few minutes.';
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
     const data = await res.json();
     const fullData = Object.entries(data);
 
@@ -627,10 +648,28 @@
 
   } catch (err) {
     console.error('[X] Error during fetch:', err);
-    alert('Failed to process image.');
+    clearInterval(countdown);
+    loadingDiv.style.display = 'none';
+    setProgress(0);
+    
+    // Show user-friendly error message
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1rem 0;
+      text-align: center;
+    `;
+    errorDiv.innerHTML = `
+      <strong>⚠️ ${err.message}</strong><br>
+      <small>If this keeps happening, please try again later or contact support.</small>
+    `;
+    menuDiv.appendChild(errorDiv);
   } finally {
     processButton.disabled = false;
-    loadingDiv.style.display = 'none';
     document.getElementById('doneIndicator').style.display = 'block';
   }
 }
@@ -698,7 +737,17 @@ async function openCameraOverlay() {
     console.log('Camera overlay opened successfully');
   } catch (err) {
     console.error('Camera access failed:', err);
-    alert('Camera access failed: ' + err.message);
+    
+    let errorMessage = 'Camera access failed.';
+    if (err.name === 'NotAllowedError') {
+      errorMessage = 'Camera permission denied. Please allow camera access and try again.';
+    } else if (err.name === 'NotFoundError') {
+      errorMessage = 'No camera found on this device.';
+    } else if (err.name === 'NotSupportedError') {
+      errorMessage = 'Camera not supported on this device.';
+    }
+    
+    alert(errorMessage);
     closeCameraOverlay();
   }
 }
